@@ -275,6 +275,8 @@ if uploaded_file is not None:
                 rec.append("SpO2 is slightly low. Stay calm and monitor oxygen levels.")
             if row["steps"] < 4000:
                 rec.append("Physical activity is low. Try a short walk or light movement.")
+                if row["stress_level"] == "high":
+    rec.append("High stress detected. Try relaxation techniques.")
             if not rec:
                 rec.append("Your health indicators look stable today. Maintain your current routine.")
             return " ".join(rec)
@@ -318,6 +320,13 @@ if uploaded_file is not None:
         st.subheader("Current Health Status")
         st.write(f"**Status:** {status}")
         st.write(status_message)
+        #  Alert System
+if latest_score < 50:
+    st.error(" Alert: Health condition is critical! Immediate care needed.")
+elif latest_score < 70:
+    st.warning(" Warning: Monitor your health closely.")
+else:
+    st.success(" Your health is stable.")
 
         st.subheader("Average Summary")
         s1, s2, s3, s4 = st.columns(4)
@@ -327,6 +336,12 @@ if uploaded_file is not None:
         s4.metric("Avg Steps", round(df["steps"].mean(), 2))
 
         st.subheader("Health Trends")
+#  Weekly Summary
+st.subheader(" Weekly Summary")
+
+weekly_avg = df.resample('D', on='Timestamp').mean(numeric_only=True)
+
+st.line_chart(weekly_avg[['heart_rate', 'health_score']])
         st.line_chart(
     df.set_index("Timestamp")[["heart_rate", "temperature", "respiration", "health_score"]],
     height=300
@@ -366,7 +381,7 @@ st.subheader("User History")
 history_df = get_user_history(st.session_state.username)
 
 #  CLEAR HISTORY BUTTON WITH CONFIRMATION
-if st.button("Clear My History ⚠️"):
+if st.button("Clear My History "):
     confirm = st.checkbox("Are you sure?")
     if confirm:
         cursor.execute(
