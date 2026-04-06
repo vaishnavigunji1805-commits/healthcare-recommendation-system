@@ -410,6 +410,3 @@ if not history_df.empty:
     else:
         st.error("Health trend is CRITICAL 🚨")
 history_df = get_user_history(st.session_state.username)
-
-else:
-    st.dataframe(history_df, use_container_width=True)
