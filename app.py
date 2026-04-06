@@ -365,6 +365,24 @@ history_df = get_user_history(st.session_state.username)
 st.subheader("User History")
 history_df = get_user_history(st.session_state.username)
 
+#  CLEAR HISTORY BUTTON WITH CONFIRMATION
+if st.button("Clear My History ⚠️"):
+    confirm = st.checkbox("Are you sure?")
+    if confirm:
+        cursor.execute(
+            "DELETE FROM health_history WHERE username = ?",
+            (st.session_state.username,)
+        )
+        conn.commit()
+        st.success("History cleared successfully.")
+        st.rerun()
+
+#  KEEP THIS PART SAME
+if history_df.empty:
+    st.info("No saved history yet.")
+else:
+    st.dataframe(history_df, use_container_width=True)
+
 if st.button("Clear My History"):
     cursor.execute(
         "DELETE FROM health_history WHERE username = ?",
