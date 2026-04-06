@@ -1,6 +1,26 @@
 
 import streamlit as st
 import pandas as pd
+# Simple login system
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+def login():
+    st.title("🔐 Login System")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+   if st.button("Login"):
+    if username == "admin" and password == "1234":
+        st.session_state.logged_in = True
+        st.rerun()
+        else:
+            st.error("Invalid credentials")
+
+if not st.session_state.logged_in:
+    login()
+    st.stop()
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
 st.markdown("""
