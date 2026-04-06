@@ -6,10 +6,10 @@ import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 
-
 st.set_page_config(page_title="AI Healthcare System", layout="wide")
 
-st.markdown("""
+st.markdown(
+    """
 <style>
 body {
     background-color: #0e1117;
@@ -41,10 +41,12 @@ div[data-testid="stMetric"] div {
     border-radius: 10px;
 }
 </style>
-""", unsafe_allow_html=True)
-
+""",
+    unsafe_allow_html=True,
+)
 
 # ---------------- DATABASE ---------------- #
+
 
 def get_connection():
     return sqlite3.connect("healthcare_app.db", check_same_thread=False)
@@ -55,15 +57,18 @@ cursor = conn.cursor()
 
 
 def create_tables():
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL
         )
-    """)
+        """
+    )
 
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS health_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
@@ -75,7 +80,8 @@ def create_tables():
             fatigue_prediction TEXT,
             recommendation TEXT
         )
-    """)
+        """
+    )
     conn.commit()
 
 
@@ -86,7 +92,7 @@ def signup_user(username, password):
     try:
         cursor.execute(
             "INSERT INTO users (username, password) VALUES (?, ?)",
-            (username, password)
+            (username, password),
         )
         conn.commit()
         return True
@@ -97,43 +103,54 @@ def signup_user(username, password):
 def login_user(username, password):
     cursor.execute(
         "SELECT * FROM users WHERE username = ? AND password = ?",
-        (username, password)
+        (username, password),
     )
     return cursor.fetchone()
 
 
 def save_health_record(username, latest_row, predicted_label):
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO health_history (
             username, timestamp_saved, heart_rate, spo2, health_score,
             stress_level, fatigue_prediction, recommendation
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        username,
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        float(latest_row["heart_rate"]),
-        float(latest_row["spo2"]),
-        float(latest_row["health_score"]),
-        str(latest_row["stress_level"]),
-        str(predicted_label),
-        str(latest_row["recommendation"])
-    ))
+        """,
+        (
+            username,
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            float(latest_row["heart_rate"]),
+            float(latest_row["spo2"]),
+            float(latest_row["health_score"]),
+            str(latest_row["stress_level"]),
+            str(predicted_label),
+            str(latest_row["recommendation"]),
+        ),
+    )
     conn.commit()
 
 
 def get_user_history(username):
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT timestamp_saved, heart_rate, spo2, health_score,
                stress_level, fatigue_prediction, recommendation
         FROM health_history
         WHERE username = ?
         ORDER BY id DESC
-    """, (username,))
+        """,
+        (username,),
+    )
     rows = cursor.fetchall()
     columns = [
-        "saved_at", "heart_rate", "spo2", "health_score",
-        "stress_level", "fatigue_prediction", "recommendation"
+        "saved_at",
+        "heart_rate",
+        "spo2",
+        "health_score",
+        "stress_level",
+        "fatigue_prediction",
+        "recommendation",
     ]
     return pd.DataFrame(rows, columns=columns)
 
@@ -151,6 +168,7 @@ if "auth_mode" not in st.session_state:
 
 
 # ---------------- AUTH UI ---------------- #
+
 
 def auth_page():
     st.title("AI-Based Personalized Healthcare Recommendation System")
@@ -195,7 +213,6 @@ if not st.session_state.logged_in:
     auth_page()
     st.stop()
 
-
 # ---------------- APP HEADER ---------------- #
 
 top1, top2 = st.columns([5, 1])
@@ -207,7 +224,6 @@ with top2:
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.rerun()
-
 
 # ---------------- APP BODY ---------------- #
 
@@ -260,27 +276,31 @@ if uploaded_file is not None:
             if row["steps"] < 4000:
                 score -= 10
             return max(score, 0)
-            def recommend(row):
-                rec = []
 
-    if row['sleep_hours'] < 6:
-        rec.append("Sleep more tonight.")
+        def recommend(row):
+            rec = []
 
-    if row['steps'] < row['steps_avg']:
-        rec.append("Increase your physical activity.")
+            if row["heart_rate"] > row["hr_avg"] + 10:
+                rec.append("High heart rate detected. Take rest and avoid heavy activity.")
+            if row["temperature"] > 37.5:
+                rec.append("Body temperature is elevated. Monitor your health closely.")
+            if row["respiration"] > 20:
+                rec.append("Respiration rate is high. Try breathing exercises and avoid overexertion.")
+            if row["sleep_hours"] < 6:
+                rec.append("Sleep duration is low. Aim for better rest tonight.")
+            if row["spo2"] < 95:
+                rec.append("SpO2 is slightly low. Stay calm and monitor oxygen levels.")
+            if row["steps"] < 4000:
+                rec.append("Physical activity is low. Try a short walk or light movement.")
+            if row["stress_level"] == "high":
+                rec.append("High stress detected. Try relaxation techniques.")
+            if not rec:
+                rec.append("Your health indicators look stable today. Maintain your current routine.")
 
-    if row['resting_heart_rate'] > row['rhr_avg'] + 3:
-        rec.append("Take rest, your recovery seems low.")
+            return " ".join(rec)
 
-    if row["stress_level"] == "high":
-        rec.append("High stress detected. Try relaxation techniques.")
-
-    if not rec:
-        rec.append("You are doing great. Keep it up!")
-
-    return " ".join(rec)
-    df["health_score"] = df.apply(health_score, axis=1)
-    df["recommendation"] = df.apply(recommend, axis=1)
+        df["health_score"] = df.apply(health_score, axis=1)
+        df["recommendation"] = df.apply(recommend, axis=1)
 
         le = LabelEncoder()
         df["fatigue_encoded"] = le.fit_transform(df["fatigue_level"])
@@ -318,109 +338,91 @@ if uploaded_file is not None:
         st.subheader("Current Health Status")
         st.write(f"**Status:** {status}")
         st.write(status_message)
-        #  Alert System
-if latest_score < 50:
-    st.error(" Alert: Health condition is critical! Immediate care needed.")
-elif latest_score < 70:
-    st.warning(" Warning: Monitor your health closely.")
-else:
-    st.success(" Your health is stable.")
-    st.subheader("Average Summary")
-    s1, s2, s3, s4 = st.columns(4)
-    s1.metric("Avg Heart Rate", round(df["heart_rate"].mean(), 2))
-    s2.metric("Avg Sleep Hours", round(df["sleep_hours"].mean(), 2))
-    s3.metric("Avg SpO2", round(df["spo2"].mean(), 2))
-    s4.metric("Avg Steps", round(df["steps"].mean(), 2))
-    st.subheader("Health Trends")
-#  Weekly Summary
-st.subheader(" Weekly Summary")
 
-weekly_avg = df.resample('D', on='Timestamp').mean(numeric_only=True)
+        if latest_score < 50:
+            st.error("🚨 Alert: Health condition is critical! Immediate care needed.")
+        elif latest_score < 70:
+            st.warning("⚠️ Warning: Monitor your health closely.")
+        else:
+            st.success("✅ Your health is stable.")
 
-st.line_chart(weekly_avg[['heart_rate', 'health_score']])
-st.line_chart(
-    df.set_index("Timestamp")[["heart_rate", "temperature", "respiration", "health_score"]],
-    height=300
-)
-st.subheader("Latest Recommendation")
-st.success(latest_row["recommendation"])
-st.subheader("AI Prediction")
-st.info(f"Predicted Fatigue Level: {predicted_label}")
-st.subheader("Prediction Explanation")
-st.write(
-            "The fatigue prediction is based on heart rate, temperature, respiration, steps, sleep hours, and SpO2."
-        )
-if st.button("Save This Analysis"):
-    save_health_record(st.session_state.username, latest_row, predicted_label)
-    st.success("Analysis saved to database successfully.")
-    st.subheader("Processed Dataset")
-    st.dataframe(df, use_container_width=True)
+        st.subheader("Average Summary")
+        s1, s2, s3, s4 = st.columns(4)
+        s1.metric("Avg Heart Rate", round(df["heart_rate"].mean(), 2))
+        s2.metric("Avg Sleep Hours", round(df["sleep_hours"].mean(), 2))
+        s3.metric("Avg SpO2", round(df["spo2"].mean(), 2))
+        s4.metric("Avg Steps", round(df["steps"].mean(), 2))
 
-    st.subheader("Download Results")
-    csv = df.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="Download analyzed data as CSV",
-        data=csv,
-        file_name="analyzed_health_data.csv",
-        mime="text/csv",
+        st.subheader("Health Trends")
+        st.line_chart(
+            df.set_index("Timestamp")[["heart_rate", "temperature", "respiration", "health_score"]],
+            height=300,
         )
 
-# ================= USER HISTORY =================
+        st.subheader("📅 Weekly Summary")
+        weekly_avg = df.resample("D", on="Timestamp").mean(numeric_only=True)
+        st.line_chart(weekly_avg[["heart_rate", "health_score"]], height=250)
+
+        st.subheader("Latest Recommendation")
+        st.success(latest_row["recommendation"])
+
+        st.subheader("AI Prediction")
+        st.info(f"Predicted Fatigue Level: {predicted_label}")
+
+        st.subheader("Prediction Explanation")
+        st.write(
+            "The fatigue prediction is based on heart rate, temperature, respiration, "
+            "steps, sleep hours, and SpO2."
+        )
+
+        if st.button("Save This Analysis"):
+            save_health_record(st.session_state.username, latest_row, predicted_label)
+            st.success("Analysis saved to database successfully.")
+
+        st.subheader("Processed Dataset")
+        st.dataframe(df, use_container_width=True)
+
+        st.subheader("Download Results")
+        csv = df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="Download analyzed data as CSV",
+            data=csv,
+            file_name="analyzed_health_data.csv",
+            mime="text/csv",
+        )
 
 st.subheader("User History")
 history_df = get_user_history(st.session_state.username)
-st.subheader("User History")
-history_df = get_user_history(st.session_state.username)
 
-#  CLEAR HISTORY BUTTON WITH CONFIRMATION
-if st.button("Clear My History "):
-    confirm = st.checkbox("Are you sure?")
-    if confirm:
-        cursor.execute(
-            "DELETE FROM health_history WHERE username = ?",
-            (st.session_state.username,)
-        )
-        conn.commit()
-        st.success("History cleared successfully.")
-        st.rerun()
-
-#  KEEP THIS PART SAME
-if history_df.empty:
-    st.info("No saved history yet.")
-else:
-    st.dataframe(history_df, use_container_width=True)
-
-# Existing logic
-if history_df.empty:
-    st.info("No saved history yet.")
-else:
-    st.dataframe(history_df, use_container_width=True)
+if st.button("Clear My History ⚠️"):
+    cursor.execute(
+        "DELETE FROM health_history WHERE username = ?",
+        (st.session_state.username,),
+    )
+    conn.commit()
+    st.success("History cleared successfully.")
+    st.rerun()
 
 if history_df.empty:
     st.info("No saved history yet.")
 else:
     st.dataframe(history_df, use_container_width=True)
 
-    # 📈 History Analytics
     st.subheader("Health Score Trend (History)")
     history_df["saved_at"] = pd.to_datetime(history_df["saved_at"])
-
     st.line_chart(
         history_df.set_index("saved_at")["health_score"],
-        height=300
+        height=300,
     )
 
-    # 📊 Stress Distribution
     st.subheader("Stress Level Distribution")
     stress_counts = history_df["stress_level"].value_counts()
     st.bar_chart(stress_counts)
 
-    # 📉 Performance Insight
     st.subheader("Performance Insight")
-
     avg_score = history_df["health_score"].mean()
-    latest_score = history_df["health_score"].iloc[0]
-    oldest_score = history_df["health_score"].iloc[-1]
+    latest_history_score = history_df["health_score"].iloc[0]
+    oldest_history_score = history_df["health_score"].iloc[-1]
 
     if avg_score >= 80:
         st.success("Overall health trend is GOOD")
@@ -429,9 +431,16 @@ else:
     else:
         st.error("Health trend is CRITICAL")
 
-    if latest_score > oldest_score:
+    if latest_history_score > oldest_history_score:
         st.success("Your health is improving")
-    elif latest_score < oldest_score:
+    elif latest_history_score < oldest_history_score:
         st.error("Your health is declining")
     else:
         st.info("No significant change in health")
+
+st.subheader("Conclusion")
+st.write(
+    "This system analyzes wearable sensor data, predicts fatigue level using machine "
+    "learning, stores user history in a database, and provides personalized healthcare "
+    "recommendations."
+)
