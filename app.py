@@ -279,8 +279,8 @@ if uploaded_file is not None:
         rec.append("You are doing great. Keep it up!")
 
     return " ".join(rec)
-        df["health_score"] = df.apply(health_score, axis=1)
-        df["recommendation"] = df.apply(recommend, axis=1)
+    df["health_score"] = df.apply(health_score, axis=1)
+    df["recommendation"] = df.apply(recommend, axis=1)
 
         le = LabelEncoder()
         df["fatigue_encoded"] = le.fit_transform(df["fatigue_level"])
