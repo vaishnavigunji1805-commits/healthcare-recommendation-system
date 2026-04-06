@@ -1,28 +1,14 @@
+import sqlite3
+from datetime import datetime
 
-import streamlit as st
 import pandas as pd
-# Simple login system
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-def login():
-    st.title("🔐 Login System")
-
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-
-    if st.button("Login"):
-        if username == "admin" and password == "1234":
-            st.session_state.logged_in = True
-            st.rerun()
-        else:
-            st.error("Invalid credentials")
-
-if not st.session_state.logged_in:
-    login()
-    st.stop()
-from sklearn.preprocessing import LabelEncoder
+import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+
+
+st.set_page_config(page_title="AI Healthcare System", layout="wide")
+
 st.markdown("""
 <style>
 body {
@@ -57,10 +43,173 @@ div[data-testid="stMetric"] div {
 </style>
 """, unsafe_allow_html=True)
 
-st.set_page_config(page_title="AI Healthcare System", layout="wide")
 
-st.title("AI-Based Personalized Healthcare Recommendation System")
-st.write("Upload wearable sensor data to analyze health trends, predict fatigue, and generate recommendations.")
+# ---------------- DATABASE ---------------- #
+
+def get_connection():
+    return sqlite3.connect("healthcare_app.db", check_same_thread=False)
+
+
+conn = get_connection()
+cursor = conn.cursor()
+
+
+def create_tables():
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS health_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            timestamp_saved TEXT NOT NULL,
+            heart_rate REAL,
+            spo2 REAL,
+            health_score REAL,
+            stress_level TEXT,
+            fatigue_prediction TEXT,
+            recommendation TEXT
+        )
+    """)
+    conn.commit()
+
+
+create_tables()
+
+
+def signup_user(username, password):
+    try:
+        cursor.execute(
+            "INSERT INTO users (username, password) VALUES (?, ?)",
+            (username, password)
+        )
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+
+
+def login_user(username, password):
+    cursor.execute(
+        "SELECT * FROM users WHERE username = ? AND password = ?",
+        (username, password)
+    )
+    return cursor.fetchone()
+
+
+def save_health_record(username, latest_row, predicted_label):
+    cursor.execute("""
+        INSERT INTO health_history (
+            username, timestamp_saved, heart_rate, spo2, health_score,
+            stress_level, fatigue_prediction, recommendation
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        username,
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        float(latest_row["heart_rate"]),
+        float(latest_row["spo2"]),
+        float(latest_row["health_score"]),
+        str(latest_row["stress_level"]),
+        str(predicted_label),
+        str(latest_row["recommendation"])
+    ))
+    conn.commit()
+
+
+def get_user_history(username):
+    cursor.execute("""
+        SELECT timestamp_saved, heart_rate, spo2, health_score,
+               stress_level, fatigue_prediction, recommendation
+        FROM health_history
+        WHERE username = ?
+        ORDER BY id DESC
+    """, (username,))
+    rows = cursor.fetchall()
+    columns = [
+        "saved_at", "heart_rate", "spo2", "health_score",
+        "stress_level", "fatigue_prediction", "recommendation"
+    ]
+    return pd.DataFrame(rows, columns=columns)
+
+
+# ---------------- SESSION ---------------- #
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+if "auth_mode" not in st.session_state:
+    st.session_state.auth_mode = "login"
+
+
+# ---------------- AUTH UI ---------------- #
+
+def auth_page():
+    st.title("AI-Based Personalized Healthcare Recommendation System")
+    st.subheader("User Authentication")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Login"):
+            st.session_state.auth_mode = "login"
+    with col2:
+        if st.button("Sign Up"):
+            st.session_state.auth_mode = "signup"
+
+    st.write(f"Current mode: **{st.session_state.auth_mode.capitalize()}**")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.session_state.auth_mode == "signup":
+        if st.button("Create Account"):
+            if not username or not password:
+                st.error("Please enter both username and password.")
+            else:
+                created = signup_user(username, password)
+                if created:
+                    st.success("Account created successfully. Now login.")
+                    st.session_state.auth_mode = "login"
+                else:
+                    st.error("Username already exists.")
+    else:
+        if st.button("Login Now"):
+            user = login_user(username, password)
+            if user:
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.rerun()
+            else:
+                st.error("Invalid credentials.")
+
+
+if not st.session_state.logged_in:
+    auth_page()
+    st.stop()
+
+
+# ---------------- APP HEADER ---------------- #
+
+top1, top2 = st.columns([5, 1])
+with top1:
+    st.title("Healthcare Dashboard")
+    st.write(f"Welcome, **{st.session_state.username}**")
+with top2:
+    if st.button("Logout"):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.rerun()
+
+
+# ---------------- APP BODY ---------------- #
 
 uploaded_file = st.file_uploader("Upload wearable data CSV", type=["csv"])
 
@@ -98,7 +247,6 @@ if uploaded_file is not None:
 
         def health_score(row):
             score = 100
-
             if row["heart_rate"] > row["hr_avg"] + 10:
                 score -= 20
             if row["temperature"] > 37.5:
@@ -111,12 +259,10 @@ if uploaded_file is not None:
                 score -= 10
             if row["steps"] < 4000:
                 score -= 10
-
             return max(score, 0)
 
         def recommend(row):
             rec = []
-
             if row["heart_rate"] > row["hr_avg"] + 10:
                 rec.append("High heart rate detected. Take rest and avoid heavy activity.")
             if row["temperature"] > 37.5:
@@ -131,7 +277,6 @@ if uploaded_file is not None:
                 rec.append("Physical activity is low. Try a short walk or light movement.")
             if not rec:
                 rec.append("Your health indicators look stable today. Maintain your current routine.")
-
             return " ".join(rec)
 
         df["health_score"] = df.apply(health_score, axis=1)
@@ -164,7 +309,6 @@ if uploaded_file is not None:
             status_message = "Your health indicators require immediate care and rest."
 
         st.subheader("Dashboard")
-
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("Heart Rate", int(latest_row["heart_rate"]))
         col2.metric("SpO2", int(latest_row["spo2"]))
@@ -198,6 +342,10 @@ if uploaded_file is not None:
             "The fatigue prediction is based on heart rate, temperature, respiration, steps, sleep hours, and SpO2."
         )
 
+        if st.button("Save This Analysis"):
+            save_health_record(st.session_state.username, latest_row, predicted_label)
+            st.success("Analysis saved to database successfully.")
+
         st.subheader("Processed Dataset")
         st.dataframe(df, use_container_width=True)
 
@@ -209,5 +357,11 @@ if uploaded_file is not None:
             file_name="analyzed_health_data.csv",
             mime="text/csv",
         )
+
+st.subheader("User History")
+history_df = get_user_history(st.session_state.username)
+
+if history_df.empty:
+    st.info("No saved history yet.")
 else:
-    st.info("Please upload your combined_health_data.csv file to view analysis.")
+    st.dataframe(history_df, use_container_width=True)
