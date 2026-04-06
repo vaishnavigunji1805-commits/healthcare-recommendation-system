@@ -71,3 +71,24 @@ if uploaded_file is not None:
 
     st.subheader("Full Dataset")
     st.dataframe(df)
+    from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+
+# Encode target
+le = LabelEncoder()
+df['fatigue_encoded'] = le.fit_transform(df['fatigue_level'])
+
+# Features
+X = df[['heart_rate', 'temperature', 'respiration', 'steps', 'sleep_hours', 'spo2']]
+y = df['fatigue_encoded']
+
+# Train model
+model = RandomForestClassifier()
+model.fit(X, y)
+
+# Predict latest row
+latest = X.iloc[-1].values.reshape(1, -1)
+prediction = model.predict(latest)
+predicted_label = le.inverse_transform(prediction)[0]
+st.subheader("🤖 AI Prediction")
+st.info(f"Predicted Fatigue Level: {predicted_label}")
