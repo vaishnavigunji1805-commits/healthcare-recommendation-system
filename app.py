@@ -342,14 +342,12 @@ st.line_chart(
     df.set_index("Timestamp")[["heart_rate", "temperature", "respiration", "health_score"]],
     height=300
 )
-        st.subheader("Latest Recommendation")
-        st.success(latest_row["recommendation"])
-
-        st.subheader("AI Prediction")
-        st.info(f"Predicted Fatigue Level: {predicted_label}")
-
-        st.subheader("Prediction Explanation")
-        st.write(
+st.subheader("Latest Recommendation")
+st.success(latest_row["recommendation"])
+st.subheader("AI Prediction")
+st.info(f"Predicted Fatigue Level: {predicted_label}")
+st.subheader("Prediction Explanation")
+st.write(
             "The fatigue prediction is based on heart rate, temperature, respiration, steps, sleep hours, and SpO2."
         )
 
