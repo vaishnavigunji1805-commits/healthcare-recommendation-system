@@ -261,8 +261,8 @@ if uploaded_file is not None:
                 score -= 10
             return max(score, 0)
 
-        def recommend(row):
-             rec = []
+      def recommend(row):
+    rec = []
 
     if row['sleep_hours'] < 6:
         rec.append("Sleep more tonight.")
@@ -272,13 +272,14 @@ if uploaded_file is not None:
 
     if row['resting_heart_rate'] > row['rhr_avg'] + 3:
         rec.append("Take rest, your recovery seems low.")
-        
+
     if row["stress_level"] == "high":
         rec.append("High stress detected. Try relaxation techniques.")
 
     if not rec:
         rec.append("You are doing great. Keep it up!")
-        return " ".join(rec)
+
+    return " ".join(rec)
         df["health_score"] = df.apply(health_score, axis=1)
         df["recommendation"] = df.apply(recommend, axis=1)
 
