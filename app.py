@@ -327,9 +327,7 @@ if uploaded_file is not None:
         s4.metric("Avg Steps", round(df["steps"].mean(), 2))
 
         st.subheader("Health Trends")
-        st.line_chart(
-            df.set_index("Timestamp")[["heart_rate", "temperature", "respiration", "health_score"]]
-        )
+        st.line_chart(history_df.set_index("saved_at")["health_score"], height=300)
 
         st.subheader("Latest Recommendation")
         st.success(latest_row["recommendation"])
