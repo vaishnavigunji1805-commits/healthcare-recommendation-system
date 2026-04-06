@@ -356,7 +356,10 @@ if uploaded_file is not None:
             mime="text/csv",
         )
 
+# ================= USER HISTORY =================
+
 st.subheader("User History")
+
 history_df = get_user_history(st.session_state.username)
 
 if history_df.empty:
@@ -364,17 +367,26 @@ if history_df.empty:
 else:
     st.dataframe(history_df, use_container_width=True)
 
-    # History Analytics
+    # 📈 History Analytics
     st.subheader("Health Score Trend (History)")
     history_df["saved_at"] = pd.to_datetime(history_df["saved_at"])
-    st.line_chart(history_df.set_index("saved_at")["health_score"])
 
+    st.line_chart(
+        history_df.set_index("saved_at")["health_score"],
+        height=300
+    )
+
+    # 📊 Stress Distribution
     st.subheader("Stress Level Distribution")
     stress_counts = history_df["stress_level"].value_counts()
     st.bar_chart(stress_counts)
 
+    # 📉 Performance Insight
     st.subheader("Performance Insight")
+
     avg_score = history_df["health_score"].mean()
+    latest_score = history_df["health_score"].iloc[0]
+    oldest_score = history_df["health_score"].iloc[-1]
 
     if avg_score >= 80:
         st.success("Overall health trend is GOOD")
@@ -382,29 +394,10 @@ else:
         st.warning("Health trend is MODERATE")
     else:
         st.error("Health trend is CRITICAL")
-# 📊 History Analytics
-if not history_df.empty:
-    st.subheader("📈 Health Score Trend (History)")
-    
-    history_df["saved_at"] = pd.to_datetime(history_df["saved_at"])
-    
-    st.line_chart(
-        history_df.set_index("saved_at")["health_score"]
-    )
 
-    st.subheader("📊 Stress Level Distribution")
-
-    stress_counts = history_df["stress_level"].value_counts()
-    st.bar_chart(stress_counts)
-
-    st.subheader("📉 Performance Insight")
-
-    avg_score = history_df["health_score"].mean()
-
-    if avg_score >= 80:
-        st.success("Overall health trend is GOOD 👍")
-    elif avg_score >= 50:
-        st.warning("Health trend is MODERATE ⚠️")
+    if latest_score > oldest_score:
+        st.success("Your health is improving")
+    elif latest_score < oldest_score:
+        st.error("Your health is declining")
     else:
-        st.error("Health trend is CRITICAL 🚨")
-history_df = get_user_history(st.session_state.username)
+        st.info("No significant change in health")
