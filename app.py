@@ -5,106 +5,155 @@ from sklearn.ensemble import RandomForestClassifier
 
 st.set_page_config(page_title="AI Healthcare System", layout="wide")
 
-st.title("Personalized Healthcare Recommendation System")
+st.title("AI-Based Personalized Healthcare Recommendation System")
+st.write("Upload wearable sensor data to analyze health trends, predict fatigue, and generate recommendations.")
 
 uploaded_file = st.file_uploader("Upload wearable data CSV", type=["csv"])
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
 
-    # Convert timestamp
-    df["Timestamp"] = pd.to_datetime(df["Timestamp"])
+    required_columns = [
+        "Timestamp",
+        "heart_rate",
+        "temperature",
+        "respiration",
+        "steps",
+        "sleep_hours",
+        "stress_level",
+        "spo2",
+        "calories",
+        "activity_type",
+        "fatigue_level",
+    ]
 
-    # Remove missing values
-    df = df.dropna()
+    missing_columns = [col for col in required_columns if col not in df.columns]
 
-    # Rolling averages
-    df["hr_avg"] = df["heart_rate"].rolling(3, min_periods=1).mean()
-    df["temp_avg"] = df["temperature"].rolling(3, min_periods=1).mean()
-    df["resp_avg"] = df["respiration"].rolling(3, min_periods=1).mean()
+    if missing_columns:
+        st.error(f"Missing required columns: {', '.join(missing_columns)}")
+    else:
+        df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
+        df = df.dropna().copy()
+        df = df.sort_values("Timestamp").reset_index(drop=True)
 
-    # Health score function
-    def health_score(row):
-        score = 100
+        df["hr_avg"] = df["heart_rate"].rolling(3, min_periods=1).mean()
+        df["temp_avg"] = df["temperature"].rolling(3, min_periods=1).mean()
+        df["resp_avg"] = df["respiration"].rolling(3, min_periods=1).mean()
+        df["steps_avg"] = df["steps"].rolling(3, min_periods=1).mean()
+        df["sleep_avg"] = df["sleep_hours"].rolling(3, min_periods=1).mean()
 
-        if row["heart_rate"] > row["hr_avg"] + 10:
-            score -= 20
-        if row["temperature"] > 37.5:
-            score -= 20
-        if row["respiration"] > 20:
-            score -= 15
-        if row["sleep_hours"] < 6:
-            score -= 15
-        if row["spo2"] < 95:
-            score -= 10
-        if row["steps"] < 4000:
-            score -= 10
+        def health_score(row):
+            score = 100
 
-        return max(score, 0)
+            if row["heart_rate"] > row["hr_avg"] + 10:
+                score -= 20
+            if row["temperature"] > 37.5:
+                score -= 20
+            if row["respiration"] > 20:
+                score -= 15
+            if row["sleep_hours"] < 6:
+                score -= 15
+            if row["spo2"] < 95:
+                score -= 10
+            if row["steps"] < 4000:
+                score -= 10
 
-    # Recommendation function
-    def recommend(row):
-        rec = []
+            return max(score, 0)
 
-        if row["heart_rate"] > row["hr_avg"] + 10:
-            rec.append("High heart rate detected. Take some rest.")
-        if row["temperature"] > 37.5:
-            rec.append("Body temperature is high. Monitor your condition.")
-        if row["respiration"] > 20:
-            rec.append("Respiration rate is elevated. Avoid overexertion.")
-        if row["sleep_hours"] < 6:
-            rec.append("Sleep duration is low. Try to rest more tonight.")
-        if row["spo2"] < 95:
-            rec.append("Oxygen level is slightly low. Observe carefully.")
-        if row["steps"] < 4000:
-            rec.append("Physical activity is low. Try a short walk.")
-        if not rec:
-            rec.append("Your health indicators look stable today.")
+        def recommend(row):
+            rec = []
 
-        return " ".join(rec)
+            if row["heart_rate"] > row["hr_avg"] + 10:
+                rec.append("High heart rate detected. Take rest and avoid heavy activity.")
+            if row["temperature"] > 37.5:
+                rec.append("Body temperature is elevated. Monitor your health closely.")
+            if row["respiration"] > 20:
+                rec.append("Respiration rate is high. Try breathing exercises and avoid overexertion.")
+            if row["sleep_hours"] < 6:
+                rec.append("Sleep duration is low. Aim for better rest tonight.")
+            if row["spo2"] < 95:
+                rec.append("SpO2 is slightly low. Stay calm and monitor oxygen levels.")
+            if row["steps"] < 4000:
+                rec.append("Physical activity is low. Try a short walk or light movement.")
+            if not rec:
+                rec.append("Your health indicators look stable today. Maintain your current routine.")
 
-    # Apply functions
-    df["health_score"] = df.apply(health_score, axis=1)
-    df["recommendation"] = df.apply(recommend, axis=1)
+            return " ".join(rec)
 
-    # Machine learning model
-    le = LabelEncoder()
-    df["fatigue_encoded"] = le.fit_transform(df["fatigue_level"])
+        df["health_score"] = df.apply(health_score, axis=1)
+        df["recommendation"] = df.apply(recommend, axis=1)
 
-    X = df[["heart_rate", "temperature", "respiration", "steps", "sleep_hours", "spo2"]]
-    y = df["fatigue_encoded"]
+        le = LabelEncoder()
+        df["fatigue_encoded"] = le.fit_transform(df["fatigue_level"])
 
-    model = RandomForestClassifier(random_state=42)
-    model.fit(X, y)
+        X = df[["heart_rate", "temperature", "respiration", "steps", "sleep_hours", "spo2"]]
+        y = df["fatigue_encoded"]
 
-    latest = X.iloc[-1].values.reshape(1, -1)
-    prediction = model.predict(latest)
-    predicted_label = le.inverse_transform(prediction)[0]
+        model = RandomForestClassifier(random_state=42)
+        model.fit(X, y)
 
-    # Dashboard metrics
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Heart Rate", int(df.iloc[-1]["heart_rate"]))
-    col2.metric("SpO2", int(df.iloc[-1]["spo2"]))
-    col3.metric("Health Score", int(df.iloc[-1]["health_score"]))
-    col4.metric("Stress Level", df.iloc[-1]["stress_level"])
+        latest = X.iloc[-1].values.reshape(1, -1)
+        prediction = model.predict(latest)
+        predicted_label = le.inverse_transform(prediction)[0]
 
-    # Trends
-    st.subheader("Health Trends")
-    st.line_chart(
-        df.set_index("Timestamp")[["heart_rate", "temperature", "respiration", "health_score"]]
-    )
+        latest_row = df.iloc[-1]
+        latest_score = int(latest_row["health_score"])
 
-    # Recommendation
-    st.subheader("Latest Recommendation")
-    st.success(df.iloc[-1]["recommendation"])
+        if latest_score >= 80:
+            status = "Good"
+            status_message = "Your current condition looks stable."
+        elif latest_score >= 50:
+            status = "Moderate"
+            status_message = "Some health indicators need attention."
+        else:
+            status = "Critical"
+            status_message = "Your health indicators require immediate care and rest."
 
-    # AI Prediction
-    st.subheader("AI Prediction")
-    st.info(f"Predicted Fatigue Level: {predicted_label}")
+        st.subheader("Dashboard")
 
-    # Full dataset
-    st.subheader("Full Dataset")
-    st.dataframe(df)
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Heart Rate", int(latest_row["heart_rate"]))
+        col2.metric("SpO2", int(latest_row["spo2"]))
+        col3.metric("Health Score", latest_score)
+        col4.metric("Stress Level", str(latest_row["stress_level"]).capitalize())
 
+        st.subheader("Current Health Status")
+        st.write(f"**Status:** {status}")
+        st.write(status_message)
+
+        st.subheader("Average Summary")
+        s1, s2, s3, s4 = st.columns(4)
+        s1.metric("Avg Heart Rate", round(df["heart_rate"].mean(), 2))
+        s2.metric("Avg Sleep Hours", round(df["sleep_hours"].mean(), 2))
+        s3.metric("Avg SpO2", round(df["spo2"].mean(), 2))
+        s4.metric("Avg Steps", round(df["steps"].mean(), 2))
+
+        st.subheader("Health Trends")
+        st.line_chart(
+            df.set_index("Timestamp")[["heart_rate", "temperature", "respiration", "health_score"]]
+        )
+
+        st.subheader("Latest Recommendation")
+        st.success(latest_row["recommendation"])
+
+        st.subheader("AI Prediction")
+        st.info(f"Predicted Fatigue Level: {predicted_label}")
+
+        st.subheader("Prediction Explanation")
+        st.write(
+            "The fatigue prediction is based on heart rate, temperature, respiration, steps, sleep hours, and SpO2."
+        )
+
+        st.subheader("Processed Dataset")
+        st.dataframe(df, use_container_width=True)
+
+        st.subheader("Download Results")
+        csv = df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="Download analyzed data as CSV",
+            data=csv,
+            file_name="analyzed_health_data.csv",
+            mime="text/csv",
+        )
 else:
     st.info("Please upload your combined_health_data.csv file to view analysis.")
