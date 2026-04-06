@@ -350,21 +350,19 @@ st.subheader("Prediction Explanation")
 st.write(
             "The fatigue prediction is based on heart rate, temperature, respiration, steps, sleep hours, and SpO2."
         )
+if st.button("Save This Analysis"):
+    save_health_record(st.session_state.username, latest_row, predicted_label)
+    st.success("Analysis saved to database successfully.")
+    st.subheader("Processed Dataset")
+    st.dataframe(df, use_container_width=True)
 
-        if st.button("Save This Analysis"):
-            save_health_record(st.session_state.username, latest_row, predicted_label)
-            st.success("Analysis saved to database successfully.")
-
-        st.subheader("Processed Dataset")
-        st.dataframe(df, use_container_width=True)
-
-        st.subheader("Download Results")
-        csv = df.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            label="Download analyzed data as CSV",
-            data=csv,
-            file_name="analyzed_health_data.csv",
-            mime="text/csv",
+    st.subheader("Download Results")
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="Download analyzed data as CSV",
+        data=csv,
+        file_name="analyzed_health_data.csv",
+        mime="text/csv",
         )
 
 # ================= USER HISTORY =================
