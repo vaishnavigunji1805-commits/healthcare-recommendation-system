@@ -361,8 +361,24 @@ if uploaded_file is not None:
 # ================= USER HISTORY =================
 
 st.subheader("User History")
-
 history_df = get_user_history(st.session_state.username)
+st.subheader("User History")
+history_df = get_user_history(st.session_state.username)
+
+if st.button("Clear My History"):
+    cursor.execute(
+        "DELETE FROM health_history WHERE username = ?",
+        (st.session_state.username,)
+    )
+    conn.commit()
+    st.success("History cleared successfully.")
+    st.rerun()
+
+# Existing logic
+if history_df.empty:
+    st.info("No saved history yet.")
+else:
+    st.dataframe(history_df, use_container_width=True)
 
 if history_df.empty:
     st.info("No saved history yet.")
