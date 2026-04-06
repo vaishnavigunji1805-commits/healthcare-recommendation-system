@@ -325,15 +325,13 @@ elif latest_score < 70:
     st.warning(" Warning: Monitor your health closely.")
 else:
     st.success(" Your health is stable.")
-
-        st.subheader("Average Summary")
-        s1, s2, s3, s4 = st.columns(4)
-        s1.metric("Avg Heart Rate", round(df["heart_rate"].mean(), 2))
-        s2.metric("Avg Sleep Hours", round(df["sleep_hours"].mean(), 2))
-        s3.metric("Avg SpO2", round(df["spo2"].mean(), 2))
-        s4.metric("Avg Steps", round(df["steps"].mean(), 2))
-
-        st.subheader("Health Trends")
+    st.subheader("Average Summary")
+    s1, s2, s3, s4 = st.columns(4)
+    s1.metric("Avg Heart Rate", round(df["heart_rate"].mean(), 2))
+    s2.metric("Avg Sleep Hours", round(df["sleep_hours"].mean(), 2))
+    s3.metric("Avg SpO2", round(df["spo2"].mean(), 2))
+    s4.metric("Avg Steps", round(df["steps"].mean(), 2))
+    st.subheader("Health Trends")
 #  Weekly Summary
 st.subheader(" Weekly Summary")
 
