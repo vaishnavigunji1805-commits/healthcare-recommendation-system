@@ -260,9 +260,8 @@ if uploaded_file is not None:
             if row["steps"] < 4000:
                 score -= 10
             return max(score, 0)
-
-      def recommend(row):
-    rec = []
+            def recommend(row):
+                rec = []
 
     if row['sleep_hours'] < 6:
         rec.append("Sleep more tonight.")
