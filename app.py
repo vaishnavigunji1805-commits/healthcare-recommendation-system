@@ -359,6 +359,31 @@ if uploaded_file is not None:
         )
 
 st.subheader("User History")
+# 📊 History Analytics
+if not history_df.empty:
+    st.subheader("📈 Health Score Trend (History)")
+    
+    history_df["saved_at"] = pd.to_datetime(history_df["saved_at"])
+    
+    st.line_chart(
+        history_df.set_index("saved_at")["health_score"]
+    )
+
+    st.subheader("📊 Stress Level Distribution")
+
+    stress_counts = history_df["stress_level"].value_counts()
+    st.bar_chart(stress_counts)
+
+    st.subheader("📉 Performance Insight")
+
+    avg_score = history_df["health_score"].mean()
+
+    if avg_score >= 80:
+        st.success("Overall health trend is GOOD 👍")
+    elif avg_score >= 50:
+        st.warning("Health trend is MODERATE ⚠️")
+    else:
+        st.error("Health trend is CRITICAL 🚨")
 history_df = get_user_history(st.session_state.username)
 
 if history_df.empty:
