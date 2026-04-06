@@ -262,8 +262,7 @@ if uploaded_file is not None:
             return max(score, 0)
 
         def recommend(row):
-            
-    rec = []
+             rec = []
 
     if row['sleep_hours'] < 6:
         rec.append("Sleep more tonight.")
