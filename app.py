@@ -14,17 +14,26 @@ h1, h2, h3 {
     color: #00c6ff;
 }
 
-.stMetric {
+div[data-testid="stMetric"] {
     background-color: #1e222a;
     padding: 15px;
-    border-radius: 10px;
+    border-radius: 12px;
     text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+div[data-testid="stMetric"] label {
+    color: #cfd8e3 !important;
+    font-weight: 600;
+}
+
+div[data-testid="stMetric"] div {
+    color: #ffffff !important;
 }
 
 .stAlert {
     border-radius: 10px;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
