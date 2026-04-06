@@ -1,7 +1,32 @@
+
 import streamlit as st
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
+st.markdown("""
+<style>
+body {
+    background-color: #0e1117;
+    color: white;
+}
+
+h1, h2, h3 {
+    color: #00c6ff;
+}
+
+.stMetric {
+    background-color: #1e222a;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.stAlert {
+    border-radius: 10px;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 st.set_page_config(page_title="AI Healthcare System", layout="wide")
 
