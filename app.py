@@ -383,15 +383,6 @@ if history_df.empty:
 else:
     st.dataframe(history_df, use_container_width=True)
 
-if st.button("Clear My History"):
-    cursor.execute(
-        "DELETE FROM health_history WHERE username = ?",
-        (st.session_state.username,)
-    )
-    conn.commit()
-    st.success("History cleared successfully.")
-    st.rerun()
-
 # Existing logic
 if history_df.empty:
     st.info("No saved history yet.")
