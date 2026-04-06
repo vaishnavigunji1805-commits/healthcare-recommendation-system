@@ -262,24 +262,24 @@ if uploaded_file is not None:
             return max(score, 0)
 
         def recommend(row):
-            rec = []
-            if row["heart_rate"] > row["hr_avg"] + 10:
-                rec.append("High heart rate detected. Take rest and avoid heavy activity.")
-            if row["temperature"] > 37.5:
-                rec.append("Body temperature is elevated. Monitor your health closely.")
-            if row["respiration"] > 20:
-                rec.append("Respiration rate is high. Try breathing exercises and avoid overexertion.")
-            if row["sleep_hours"] < 6:
-                rec.append("Sleep duration is low. Aim for better rest tonight.")
-            if row["spo2"] < 95:
-                rec.append("SpO2 is slightly low. Stay calm and monitor oxygen levels.")
-            if row["steps"] < 4000:
-                rec.append("Physical activity is low. Try a short walk or light movement.")
-                if row["stress_level"] == "high":
-    rec.append("High stress detected. Try relaxation techniques.")
-            if not rec:
-                rec.append("Your health indicators look stable today. Maintain your current routine.")
-            return " ".join(rec)
+    rec = []
+
+    if row['sleep_hours'] < 6:
+        rec.append("Sleep more tonight.")
+
+    if row['steps'] < row['steps_avg']:
+        rec.append("Increase your physical activity.")
+
+    if row['resting_heart_rate'] > row['rhr_avg'] + 3:
+        rec.append("Take rest, your recovery seems low.")
+        
+    if row["stress_level"] == "high":
+        rec.append("High stress detected. Try relaxation techniques.")
+
+    if not rec:
+        rec.append("You are doing great. Keep it up!")
+
+    return " ".join(rec)
 
         df["health_score"] = df.apply(health_score, axis=1)
         df["recommendation"] = df.apply(recommend, axis=1)
