@@ -338,7 +338,7 @@ st.subheader(" Weekly Summary")
 weekly_avg = df.resample('D', on='Timestamp').mean(numeric_only=True)
 
 st.line_chart(weekly_avg[['heart_rate', 'health_score']])
-        st.line_chart(
+st.line_chart(
     df.set_index("Timestamp")[["heart_rate", "temperature", "respiration", "health_score"]],
     height=300
 )
