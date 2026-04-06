@@ -411,7 +411,5 @@ if not history_df.empty:
         st.error("Health trend is CRITICAL 🚨")
 history_df = get_user_history(st.session_state.username)
 
-if history_df.empty:
-    st.info("No saved history yet.")
 else:
     st.dataframe(history_df, use_container_width=True)
