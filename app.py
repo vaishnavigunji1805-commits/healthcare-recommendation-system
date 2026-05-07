@@ -485,8 +485,7 @@ st.bar_chart(
 )
 
         # ---------------- DASHBOARD ---------------- #
-
-        st.subheader("Dashboard")
+st.subheader("Dashboard")
 
         d1, d2, d3, d4 = st.columns(4)
 
