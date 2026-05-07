@@ -8,7 +8,11 @@ import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    classification_report
+)
 
 # ---------------- PAGE CONFIG ---------------- #
 
@@ -17,29 +21,114 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------------- CUSTOM CSS ---------------- #
+# ---------------- LIGHT MODE CSS ---------------- #
 
 st.markdown("""
 <style>
-body {
-    background-color: #0e1117;
+
+/* Main Background */
+.stApp {
+    background-color: #f4f6f9;
+    color: #000000;
+}
+
+/* Headings */
+h1, h2, h3 {
+    color: #0d6efd;
+    font-weight: bold;
+}
+
+/* Metric Cards */
+div[data-testid="stMetric"] {
+    background: white;
+    border: 1px solid #dce3ea;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0px 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Metric Labels */
+div[data-testid="stMetricLabel"] {
+    color: #555 !important;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Metric Values */
+div[data-testid="stMetricValue"] {
+    color: #0d1117 !important;
+    font-size: 32px;
+    font-weight: bold;
+}
+
+/* Buttons */
+.stButton > button {
+    background-color: #0d6efd;
+    color: white;
+    border-radius: 10px;
+    border: none;
+    padding: 10px 18px;
+    font-weight: bold;
+}
+
+.stButton > button:hover {
+    background-color: #0b5ed7;
     color: white;
 }
 
-h1, h2, h3 {
-    color: #00c6ff;
-}
-
-div[data-testid="stMetric"] {
-    background-color: #1e222a;
-    padding: 15px;
+/* File uploader */
+section[data-testid="stFileUploader"] {
+    background-color: white;
+    border: 1px solid #dce3ea;
     border-radius: 12px;
-    text-align: center;
+    padding: 15px;
 }
 
-.stAlert {
+/* Dataframes */
+[data-testid="stDataFrame"] {
+    background-color: white;
+    border-radius: 12px;
+}
+
+/* Alerts */
+.stSuccess {
+    background-color: #d1e7dd;
+    color: #0f5132;
     border-radius: 10px;
 }
+
+.stError {
+    background-color: #f8d7da;
+    color: #842029;
+    border-radius: 10px;
+}
+
+.stWarning {
+    background-color: #fff3cd;
+    color: #664d03;
+    border-radius: 10px;
+}
+
+.stInfo {
+    border-radius: 10px;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: white;
+}
+
+/* Inputs */
+input, textarea {
+    background-color: white !important;
+    color: black !important;
+}
+
+/* Tables */
+table {
+    color: black !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -87,6 +176,7 @@ create_tables()
 # ---------------- PASSWORD HASHING ---------------- #
 
 def hash_password(password):
+
     return hashlib.sha256(
         password.encode()
     ).hexdigest()
@@ -109,6 +199,7 @@ def signup_user(username, password):
         return True
 
     except sqlite3.IntegrityError:
+
         return False
 
 # ---------------- LOGIN ---------------- #
@@ -124,7 +215,7 @@ def login_user(username, password):
 
     return cursor.fetchone()
 
-# ---------------- SAVE HISTORY ---------------- #
+# ---------------- SAVE HEALTH RECORD ---------------- #
 
 def save_health_record(
     username,
@@ -160,7 +251,7 @@ def save_health_record(
 
     conn.commit()
 
-# ---------------- GET HISTORY ---------------- #
+# ---------------- GET USER HISTORY ---------------- #
 
 def get_user_history(username):
 
@@ -181,13 +272,13 @@ def get_user_history(username):
     rows = cursor.fetchall()
 
     columns = [
-        "saved_at",
-        "heart_rate",
-        "spo2",
-        "health_score",
-        "stress_level",
-        "fatigue_prediction",
-        "recommendation"
+        "Saved At",
+        "Heart Rate",
+        "SpO2",
+        "Health Score",
+        "Stress Level",
+        "Fatigue Prediction",
+        "Recommendation"
     ]
 
     return pd.DataFrame(
@@ -219,10 +310,12 @@ def auth_page():
     col1, col2 = st.columns(2)
 
     with col1:
+
         if st.button("Login"):
             st.session_state.auth_mode = "login"
 
     with col2:
+
         if st.button("Sign Up"):
             st.session_state.auth_mode = "signup"
 
@@ -233,7 +326,7 @@ def auth_page():
         type="password"
     )
 
-    # ---------- SIGNUP ---------- #
+    # ---------------- SIGNUP ---------------- #
 
     if st.session_state.auth_mode == "signup":
 
@@ -266,7 +359,7 @@ def auth_page():
                         "Username already exists"
                     )
 
-    # ---------- LOGIN ---------- #
+    # ---------------- LOGIN ---------------- #
 
     else:
 
@@ -383,7 +476,7 @@ if uploaded_file is not None:
 
         # ---------------- HEALTH SCORE ---------------- #
 
-        def health_score(row):
+        def calculate_health_score(row):
 
             score = 100
 
@@ -408,7 +501,7 @@ if uploaded_file is not None:
             return max(score, 0)
 
         df["health_score"] = df.apply(
-            health_score,
+            calculate_health_score,
             axis=1
         )
 
@@ -495,6 +588,16 @@ if uploaded_file is not None:
             y_pred
         )
 
+        report = classification_report(
+            y_test,
+            y_pred,
+            output_dict=True
+        )
+
+        report_df = pd.DataFrame(
+            report
+        ).transpose()
+
         # ---------------- PREDICTION ---------------- #
 
         latest = X.iloc[-1].values.reshape(1, -1)
@@ -506,6 +609,22 @@ if uploaded_file is not None:
         )[0]
 
         latest_row = df.iloc[-1]
+
+        # ---------------- HEALTH ALERTS ---------------- #
+
+        st.subheader("Health Alerts")
+
+        if latest_row["spo2"] < 90:
+
+            st.error(
+                "Critical Alert: Oxygen level is very low!"
+            )
+
+        if latest_row["heart_rate"] > 130:
+
+            st.warning(
+                "Warning: Abnormal heart rate detected!"
+            )
 
         # ---------------- MODEL PERFORMANCE ---------------- #
 
@@ -529,7 +648,21 @@ if uploaded_file is not None:
 
         st.write("Confusion Matrix")
 
-        st.dataframe(cm)
+        cm_df = pd.DataFrame(cm)
+
+        st.dataframe(
+            cm_df,
+            use_container_width=True
+        )
+
+        # ---------------- CLASSIFICATION REPORT ---------------- #
+
+        st.subheader("Classification Report")
+
+        st.dataframe(
+            report_df,
+            use_container_width=True
+        )
 
         # ---------------- FEATURE IMPORTANCE ---------------- #
 
@@ -580,6 +713,37 @@ if uploaded_file is not None:
             latest_row["stress_level"]
         )
 
+        # ---------------- BMI CALCULATOR ---------------- #
+
+        st.subheader("BMI Calculator")
+
+        b1, b2 = st.columns(2)
+
+        with b1:
+
+            height = st.number_input(
+                "Height (meters)",
+                min_value=0.0,
+                format="%.2f"
+            )
+
+        with b2:
+
+            weight = st.number_input(
+                "Weight (kg)",
+                min_value=0.0,
+                format="%.2f"
+            )
+
+        if height > 0:
+
+            bmi = weight / (height ** 2)
+
+            st.metric(
+                "BMI",
+                round(bmi, 2)
+            )
+
         # ---------------- AI PREDICTION ---------------- #
 
         st.subheader("AI Prediction")
@@ -606,6 +770,16 @@ if uploaded_file is not None:
             ]
         )
 
+        # ---------------- ACTIVITY ANALYTICS ---------------- #
+
+        st.subheader("Activity Analytics")
+
+        activity_count = df[
+            "activity_type"
+        ].value_counts()
+
+        st.bar_chart(activity_count)
+
         # ---------------- SAVE ANALYSIS ---------------- #
 
         if st.button("Save This Analysis"):
@@ -627,7 +801,7 @@ if uploaded_file is not None:
         ).encode("utf-8")
 
         st.download_button(
-            label="Download analyzed data",
+            label="Download Analyzed Data",
             data=csv,
             file_name="health_analysis.csv",
             mime="text/csv"
@@ -658,7 +832,7 @@ st.subheader("Conclusion")
 
 st.write(
     "This system analyzes wearable sensor data, "
-    "predicts fatigue level using machine learning, "
+    "predicts fatigue levels using machine learning, "
     "stores history in a database, and provides "
     "personalized healthcare recommendations."
 )
