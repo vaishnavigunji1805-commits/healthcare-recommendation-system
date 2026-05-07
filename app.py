@@ -1,8 +1,7 @@
 import sqlite3
 import os
 
-if os.path.exists("healthcare_app.db"):
-    os.remove("healthcare_app.db")
+
 
 
 import hashlib
@@ -48,7 +47,7 @@ div[data-testid="stMetric"] {
 # ---------------- DATABASE ---------------- #
 
 def get_connection():
-    return sqlite3.connect("healthcare_app.db", check_same_thread=False)
+    
 
 conn = get_connection()
 cursor = conn.cursor()
