@@ -1,4 +1,5 @@
 import sqlite3
+import hashlib
 from datetime import datetime
 
 import pandas as pd
@@ -75,28 +76,40 @@ def create_tables():
 create_tables()
 
 # ---------------- USER FUNCTIONS ---------------- #
-
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 def signup_user(username, password):
+
+    hashed_password = hash_password(password)
 
     try:
         cursor.execute(
             "INSERT INTO users (username, password) VALUES (?, ?)",
-            (username, password),
+            (username, hashed_password),
         )
+
         conn.commit()
         return True
 
     except sqlite3.IntegrityError:
         return False
 
+
+
+
+
 def login_user(username, password):
+
+    hashed_password = hash_password(password)
 
     cursor.execute(
         "SELECT * FROM users WHERE username=? AND password=?",
-        (username, password),
+        (username, hashed_password),
     )
 
     return cursor.fetchone()
+
+
 
 def save_health_record(username, latest_row, predicted_label):
 
