@@ -491,5 +491,4 @@ st.write(
     "using machine learning, stores history in a database, and provides "
     "personalized healthcare recommendations."
 )
-```
 
