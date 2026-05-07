@@ -1,9 +1,4 @@
 import sqlite3
-import os
-
-
-
-
 import hashlib
 from datetime import datetime
 
@@ -16,7 +11,10 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 
 # ---------------- PAGE CONFIG ---------------- #
 
-st.set_page_config(page_title="AI Healthcare System", layout="wide")
+st.set_page_config(
+    page_title="AI Healthcare System",
+    layout="wide"
+)
 
 # ---------------- CUSTOM CSS ---------------- #
 
@@ -47,7 +45,10 @@ div[data-testid="stMetric"] {
 # ---------------- DATABASE ---------------- #
 
 def get_connection():
-    
+    return sqlite3.connect(
+        "healthcare_app.db",
+        check_same_thread=False
+    )
 
 conn = get_connection()
 cursor = conn.cursor()
@@ -80,9 +81,13 @@ def create_tables():
 
 create_tables()
 
-# ---------------- USER FUNCTIONS ---------------- #
+# ---------------- PASSWORD HASH ---------------- #
+
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
+
+# ---------------- USER FUNCTIONS ---------------- #
+
 def signup_user(username, password):
 
     hashed_password = hash_password(password)
@@ -90,7 +95,7 @@ def signup_user(username, password):
     try:
         cursor.execute(
             "INSERT INTO users (username, password) VALUES (?, ?)",
-            (username, hashed_password),
+            (username, hashed_password)
         )
 
         conn.commit()
@@ -99,22 +104,16 @@ def signup_user(username, password):
     except sqlite3.IntegrityError:
         return False
 
-
-
-
-
 def login_user(username, password):
 
     hashed_password = hash_password(password)
 
     cursor.execute(
         "SELECT * FROM users WHERE username=? AND password=?",
-        (username, hashed_password),
+        (username, hashed_password)
     )
 
     return cursor.fetchone()
-
-
 
 def save_health_record(username, latest_row, predicted_label):
 
@@ -139,7 +138,7 @@ def save_health_record(username, latest_row, predicted_label):
         float(latest_row["health_score"]),
         str(latest_row["stress_level"]),
         str(predicted_label),
-        str(latest_row["recommendation"]),
+        str(latest_row["recommendation"])
     ))
 
     conn.commit()
@@ -169,7 +168,7 @@ def get_user_history(username):
         "health_score",
         "stress_level",
         "fatigue_prediction",
-        "recommendation",
+        "recommendation"
     ]
 
     return pd.DataFrame(rows, columns=columns)
@@ -205,12 +204,14 @@ def auth_page():
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
+    # ---------- SIGNUP ---------- #
+
     if st.session_state.auth_mode == "signup":
 
         if st.button("Create Account"):
 
             if not username or not password:
-                st.error("Enter username and password")
+                st.error("Please enter username and password")
 
             else:
 
@@ -218,10 +219,13 @@ def auth_page():
 
                 if created:
                     st.success("Account created successfully")
+
                     st.session_state.auth_mode = "login"
 
                 else:
                     st.error("Username already exists")
+
+    # ---------- LOGIN ---------- #
 
     else:
 
@@ -230,18 +234,22 @@ def auth_page():
             user = login_user(username, password)
 
             if user:
+
                 st.session_state.logged_in = True
                 st.session_state.username = username
+
                 st.rerun()
 
             else:
                 st.error("Invalid credentials")
 
+# ---------------- STOP IF NOT LOGGED IN ---------------- #
+
 if not st.session_state.logged_in:
     auth_page()
     st.stop()
 
-# ---------------- DASHBOARD HEADER ---------------- #
+# ---------------- HEADER ---------------- #
 
 top1, top2 = st.columns([5, 1])
 
@@ -251,8 +259,10 @@ with top1:
 
 with top2:
     if st.button("Logout"):
+
         st.session_state.logged_in = False
         st.session_state.username = ""
+
         st.rerun()
 
 # ---------------- FILE UPLOAD ---------------- #
@@ -277,7 +287,7 @@ if uploaded_file is not None:
         "spo2",
         "calories",
         "activity_type",
-        "fatigue_level",
+        "fatigue_level"
     ]
 
     missing_columns = [
@@ -293,7 +303,7 @@ if uploaded_file is not None:
 
     else:
 
-        # ---------------- DATA PREPROCESSING ---------------- #
+        # ---------------- PREPROCESSING ---------------- #
 
         df["Timestamp"] = pd.to_datetime(
             df["Timestamp"],
@@ -302,9 +312,14 @@ if uploaded_file is not None:
 
         df = df.dropna().copy()
 
-        df = df.sort_values("Timestamp").reset_index(drop=True)
+        df = df.sort_values(
+            "Timestamp"
+        ).reset_index(drop=True)
 
-        df["hr_avg"] = df["heart_rate"].rolling(3, min_periods=1).mean()
+        df["hr_avg"] = df["heart_rate"].rolling(
+            3,
+            min_periods=1
+        ).mean()
 
         # ---------------- HEALTH SCORE ---------------- #
 
@@ -332,7 +347,10 @@ if uploaded_file is not None:
 
             return max(score, 0)
 
-        df["health_score"] = df.apply(health_score, axis=1)
+        df["health_score"] = df.apply(
+            health_score,
+            axis=1
+        )
 
         # ---------------- RECOMMENDATION ---------------- #
 
@@ -346,18 +364,27 @@ if uploaded_file is not None:
             if row["temperature"] > 37.5:
                 rec.append("Body temperature elevated.")
 
+            if row["respiration"] > 20:
+                rec.append("Respiration rate is high.")
+
             if row["sleep_hours"] < 6:
                 rec.append("Sleep duration is low.")
 
             if row["spo2"] < 95:
                 rec.append("Low oxygen level detected.")
 
+            if row["stress_level"] == "high":
+                rec.append("Stress level is high.")
+
             if not rec:
                 rec.append("Health indicators stable.")
 
             return " ".join(rec)
 
-        df["recommendation"] = df.apply(recommend, axis=1)
+        df["recommendation"] = df.apply(
+            recommend,
+            axis=1
+        )
 
         # ---------------- MACHINE LEARNING ---------------- #
 
@@ -374,7 +401,7 @@ if uploaded_file is not None:
                 "respiration",
                 "steps",
                 "sleep_hours",
-                "spo2",
+                "spo2"
             ]
         ]
 
@@ -384,18 +411,26 @@ if uploaded_file is not None:
             X,
             y,
             test_size=0.2,
-            random_state=42,
+            random_state=42
         )
 
-        model = RandomForestClassifier(random_state=42)
+        model = RandomForestClassifier(
+            random_state=42
+        )
 
         model.fit(X_train, y_train)
 
         y_pred = model.predict(X_test)
 
-        accuracy = accuracy_score(y_test, y_pred)
+        accuracy = accuracy_score(
+            y_test,
+            y_pred
+        )
 
-        cm = confusion_matrix(y_test, y_pred)
+        cm = confusion_matrix(
+            y_test,
+            y_pred
+        )
 
         # ---------------- PREDICTION ---------------- #
 
@@ -403,7 +438,9 @@ if uploaded_file is not None:
 
         prediction = model.predict(latest)
 
-        predicted_label = le.inverse_transform(prediction)[0]
+        predicted_label = le.inverse_transform(
+            prediction
+        )[0]
 
         latest_row = df.iloc[-1]
 
@@ -434,10 +471,25 @@ if uploaded_file is not None:
 
         d1, d2, d3, d4 = st.columns(4)
 
-        d1.metric("Heart Rate", int(latest_row["heart_rate"]))
-        d2.metric("SpO2", int(latest_row["spo2"]))
-        d3.metric("Health Score", int(latest_row["health_score"]))
-        d4.metric("Stress Level", latest_row["stress_level"])
+        d1.metric(
+            "Heart Rate",
+            int(latest_row["heart_rate"])
+        )
+
+        d2.metric(
+            "SpO2",
+            int(latest_row["spo2"])
+        )
+
+        d3.metric(
+            "Health Score",
+            int(latest_row["health_score"])
+        )
+
+        d4.metric(
+            "Stress Level",
+            latest_row["stress_level"]
+        )
 
         # ---------------- AI PREDICTION ---------------- #
 
@@ -451,7 +503,9 @@ if uploaded_file is not None:
 
         st.subheader("Latest Recommendation")
 
-        st.success(latest_row["recommendation"])
+        st.success(
+            latest_row["recommendation"]
+        )
 
         # ---------------- HEALTH TRENDS ---------------- #
 
@@ -473,24 +527,30 @@ if uploaded_file is not None:
                 predicted_label
             )
 
-            st.success("Analysis saved successfully")
+            st.success(
+                "Analysis saved successfully"
+            )
 
         # ---------------- DOWNLOAD CSV ---------------- #
 
-        csv = df.to_csv(index=False).encode("utf-8")
+        csv = df.to_csv(
+            index=False
+        ).encode("utf-8")
 
         st.download_button(
             label="Download analyzed data",
             data=csv,
             file_name="health_analysis.csv",
-            mime="text/csv",
+            mime="text/csv"
         )
 
 # ---------------- USER HISTORY ---------------- #
 
 st.subheader("User History")
 
-history_df = get_user_history(st.session_state.username)
+history_df = get_user_history(
+    st.session_state.username
+)
 
 if history_df.empty:
 
@@ -498,15 +558,19 @@ if history_df.empty:
 
 else:
 
-    st.dataframe(history_df)
+    st.dataframe(
+        history_df,
+        use_container_width=True
+    )
 
 # ---------------- CONCLUSION ---------------- #
 
 st.subheader("Conclusion")
 
 st.write(
-    "This system analyzes wearable sensor data, predicts fatigue level "
-    "using machine learning, stores history in a database, and provides "
+    "This system analyzes wearable sensor data, "
+    "predicts fatigue level using machine learning, "
+    "stores history in a database, and provides "
     "personalized healthcare recommendations."
 )
 
