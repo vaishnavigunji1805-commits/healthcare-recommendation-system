@@ -4,6 +4,7 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
@@ -42,7 +43,7 @@ div[data-testid="stMetric"] {
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- DATABASE ---------------- #
+# ---------------- DATABASE CONNECTION ---------------- #
 
 def get_connection():
     return sqlite3.connect(
@@ -52,6 +53,8 @@ def get_connection():
 
 conn = get_connection()
 cursor = conn.cursor()
+
+# ---------------- CREATE TABLES ---------------- #
 
 def create_tables():
 
@@ -81,28 +84,34 @@ def create_tables():
 
 create_tables()
 
-# ---------------- PASSWORD HASH ---------------- #
+# ---------------- PASSWORD HASHING ---------------- #
 
 def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+    return hashlib.sha256(
+        password.encode()
+    ).hexdigest()
 
-# ---------------- USER FUNCTIONS ---------------- #
+# ---------------- SIGNUP ---------------- #
 
 def signup_user(username, password):
 
     hashed_password = hash_password(password)
 
     try:
+
         cursor.execute(
             "INSERT INTO users (username, password) VALUES (?, ?)",
             (username, hashed_password)
         )
 
         conn.commit()
+
         return True
 
     except sqlite3.IntegrityError:
         return False
+
+# ---------------- LOGIN ---------------- #
 
 def login_user(username, password):
 
@@ -115,7 +124,13 @@ def login_user(username, password):
 
     return cursor.fetchone()
 
-def save_health_record(username, latest_row, predicted_label):
+# ---------------- SAVE HISTORY ---------------- #
+
+def save_health_record(
+    username,
+    latest_row,
+    predicted_label
+):
 
     cursor.execute("""
     INSERT INTO health_history (
@@ -132,7 +147,9 @@ def save_health_record(username, latest_row, predicted_label):
     """,
     (
         username,
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        ),
         float(latest_row["heart_rate"]),
         float(latest_row["spo2"]),
         float(latest_row["health_score"]),
@@ -142,6 +159,8 @@ def save_health_record(username, latest_row, predicted_label):
     ))
 
     conn.commit()
+
+# ---------------- GET HISTORY ---------------- #
 
 def get_user_history(username):
 
@@ -171,9 +190,12 @@ def get_user_history(username):
         "recommendation"
     ]
 
-    return pd.DataFrame(rows, columns=columns)
+    return pd.DataFrame(
+        rows,
+        columns=columns
+    )
 
-# ---------------- SESSION ---------------- #
+# ---------------- SESSION STATE ---------------- #
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -188,7 +210,10 @@ if "auth_mode" not in st.session_state:
 
 def auth_page():
 
-    st.title("AI-Based Personalized Healthcare Recommendation System")
+    st.title(
+        "AI-Based Personalized Healthcare Recommendation System"
+    )
+
     st.subheader("User Authentication")
 
     col1, col2 = st.columns(2)
@@ -202,7 +227,11 @@ def auth_page():
             st.session_state.auth_mode = "signup"
 
     username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+
+    password = st.text_input(
+        "Password",
+        type="password"
+    )
 
     # ---------- SIGNUP ---------- #
 
@@ -211,19 +240,31 @@ def auth_page():
         if st.button("Create Account"):
 
             if not username or not password:
-                st.error("Please enter username and password")
+
+                st.error(
+                    "Please enter username and password"
+                )
 
             else:
 
-                created = signup_user(username, password)
+                created = signup_user(
+                    username,
+                    password
+                )
 
                 if created:
-                    st.success("Account created successfully")
+
+                    st.success(
+                        "Account created successfully"
+                    )
 
                     st.session_state.auth_mode = "login"
 
                 else:
-                    st.error("Username already exists")
+
+                    st.error(
+                        "Username already exists"
+                    )
 
     # ---------- LOGIN ---------- #
 
@@ -231,22 +272,31 @@ def auth_page():
 
         if st.button("Login Now"):
 
-            user = login_user(username, password)
+            user = login_user(
+                username,
+                password
+            )
 
             if user:
 
                 st.session_state.logged_in = True
+
                 st.session_state.username = username
 
                 st.rerun()
 
             else:
-                st.error("Invalid credentials")
 
-# ---------------- STOP IF NOT LOGGED IN ---------------- #
+                st.error(
+                    "Invalid credentials"
+                )
+
+# ---------------- LOGIN CHECK ---------------- #
 
 if not st.session_state.logged_in:
+
     auth_page()
+
     st.stop()
 
 # ---------------- HEADER ---------------- #
@@ -254,13 +304,19 @@ if not st.session_state.logged_in:
 top1, top2 = st.columns([5, 1])
 
 with top1:
+
     st.title("Healthcare Dashboard")
-    st.write(f"Welcome, {st.session_state.username}")
+
+    st.write(
+        f"Welcome, {st.session_state.username}"
+    )
 
 with top2:
+
     if st.button("Logout"):
 
         st.session_state.logged_in = False
+
         st.session_state.username = ""
 
         st.rerun()
@@ -271,6 +327,8 @@ uploaded_file = st.file_uploader(
     "Upload wearable data CSV",
     type=["csv"]
 )
+
+# ---------------- MAIN APP ---------------- #
 
 if uploaded_file is not None:
 
@@ -316,7 +374,9 @@ if uploaded_file is not None:
             "Timestamp"
         ).reset_index(drop=True)
 
-        df["hr_avg"] = df["heart_rate"].rolling(
+        df["hr_avg"] = df[
+            "heart_rate"
+        ].rolling(
             3,
             min_periods=1
         ).mean()
@@ -352,7 +412,7 @@ if uploaded_file is not None:
             axis=1
         )
 
-        # ---------------- RECOMMENDATION ---------------- #
+        # ---------------- RECOMMENDATIONS ---------------- #
 
         def recommend(row):
 
@@ -418,7 +478,10 @@ if uploaded_file is not None:
             random_state=42
         )
 
-        model.fit(X_train, y_train)
+        model.fit(
+            X_train,
+            y_train
+        )
 
         y_pred = model.predict(X_test)
 
@@ -448,44 +511,52 @@ if uploaded_file is not None:
 
         st.subheader("Model Performance")
 
-        col1, col2 = st.columns(2)
+        c1, c2 = st.columns(2)
 
-        with col1:
+        with c1:
+
             st.metric(
                 "Model Accuracy",
                 f"{accuracy * 100:.2f}%"
             )
 
-        with col2:
+        with c2:
+
             st.metric(
                 "Training Samples",
                 len(X_train)
             )
 
         st.write("Confusion Matrix")
+
         st.dataframe(cm)
+
         # ---------------- FEATURE IMPORTANCE ---------------- #
 
-st.subheader("Feature Importance")
+        st.subheader("Feature Importance")
 
-importance_df = pd.DataFrame({
-    "Feature": X.columns,
-    "Importance": model.feature_importances_
-})
+        importance_df = pd.DataFrame({
+            "Feature": X.columns,
+            "Importance": model.feature_importances_
+        })
 
-importance_df = importance_df.sort_values(
-    by="Importance",
-    ascending=False
-)
+        importance_df = importance_df.sort_values(
+            by="Importance",
+            ascending=False
+        )
 
-st.dataframe(importance_df)
+        st.dataframe(
+            importance_df,
+            use_container_width=True
+        )
 
-st.bar_chart(
-    importance_df.set_index("Feature")
-)
+        st.bar_chart(
+            importance_df.set_index("Feature")
+        )
 
         # ---------------- DASHBOARD ---------------- #
-st.subheader("Dashboard")
+
+        st.subheader("Dashboard")
 
         d1, d2, d3, d4 = st.columns(4)
 
@@ -591,4 +662,3 @@ st.write(
     "stores history in a database, and provides "
     "personalized healthcare recommendations."
 )
-
