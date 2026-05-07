@@ -464,6 +464,25 @@ if uploaded_file is not None:
 
         st.write("Confusion Matrix")
         st.dataframe(cm)
+        # ---------------- FEATURE IMPORTANCE ---------------- #
+
+st.subheader("Feature Importance")
+
+importance_df = pd.DataFrame({
+    "Feature": X.columns,
+    "Importance": model.feature_importances_
+})
+
+importance_df = importance_df.sort_values(
+    by="Importance",
+    ascending=False
+)
+
+st.dataframe(importance_df)
+
+st.bar_chart(
+    importance_df.set_index("Feature")
+)
 
         # ---------------- DASHBOARD ---------------- #
 
