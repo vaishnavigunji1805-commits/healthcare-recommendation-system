@@ -1,4 +1,10 @@
 import sqlite3
+import os
+
+if os.path.exists("healthcare_app.db"):
+    os.remove("healthcare_app.db")
+
+
 import hashlib
 from datetime import datetime
 
