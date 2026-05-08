@@ -1,6 +1,5 @@
 import sqlite3
 import hashlib
-import random
 from datetime import datetime
 
 import pandas as pd
@@ -48,6 +47,20 @@ div[data-testid="stMetric"] {
     box-shadow: 0px 2px 8px rgba(0,0,0,0.08);
 }
 
+/* Metric Labels */
+div[data-testid="stMetricLabel"] {
+    color: #555 !important;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Metric Values */
+div[data-testid="stMetricValue"] {
+    color: #0d1117 !important;
+    font-size: 32px;
+    font-weight: bold;
+}
+
 /* Buttons */
 .stButton > button {
     background-color: #0d6efd;
@@ -63,9 +76,57 @@ div[data-testid="stMetric"] {
     color: white;
 }
 
+/* File uploader */
+section[data-testid="stFileUploader"] {
+    background-color: white;
+    border: 1px solid #dce3ea;
+    border-radius: 12px;
+    padding: 15px;
+}
+
+/* Dataframes */
+[data-testid="stDataFrame"] {
+    background-color: white;
+    border-radius: 12px;
+}
+
+/* Alerts */
+.stSuccess {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border-radius: 10px;
+}
+
+.stError {
+    background-color: #f8d7da;
+    color: #842029;
+    border-radius: 10px;
+}
+
+.stWarning {
+    background-color: #fff3cd;
+    color: #664d03;
+    border-radius: 10px;
+}
+
+.stInfo {
+    border-radius: 10px;
+}
+
 /* Sidebar */
 section[data-testid="stSidebar"] {
     background-color: white;
+}
+
+/* Inputs */
+input, textarea {
+    background-color: white !important;
+    color: black !important;
+}
+
+/* Tables */
+table {
+    color: black !important;
 }
 
 </style>
@@ -249,10 +310,12 @@ def auth_page():
     col1, col2 = st.columns(2)
 
     with col1:
+
         if st.button("Login"):
             st.session_state.auth_mode = "login"
 
     with col2:
+
         if st.button("Sign Up"):
             st.session_state.auth_mode = "signup"
 
@@ -329,19 +392,6 @@ if not st.session_state.logged_in:
 
     st.stop()
 
-# ---------------- SIDEBAR MENU ---------------- #
-
-menu = [
-    "Healthcare Analysis",
-    "Live Monitoring Dashboard",
-    "User History"
-]
-
-choice = st.sidebar.selectbox(
-    "Navigation",
-    menu
-)
-
 # ---------------- HEADER ---------------- #
 
 top1, top2 = st.columns([5, 1])
@@ -364,565 +414,425 @@ with top2:
 
         st.rerun()
 
-# =========================================================
-# LIVE MONITORING DASHBOARD
-# =========================================================
+# ---------------- FILE UPLOAD ---------------- #
 
-if choice == "Live Monitoring Dashboard":
+uploaded_file = st.file_uploader(
+    "Upload wearable data CSV",
+    type=["csv"]
+)
 
-    st.title("Live Health Monitoring Dashboard")
+# ---------------- MAIN APP ---------------- #
 
-    st.write(
-        "Hybrid Wearable Sensor Data Analytics"
-    )
+if uploaded_file is not None:
 
-    # ---------------- SIMULATED SENSOR VALUES ---------------- #
+    df = pd.read_csv(uploaded_file)
 
-    heart_rate = random.randint(60, 120)
-    spo2 = random.randint(92, 100)
-    steps = random.randint(1000, 15000)
-    sleep_hours = round(random.uniform(4, 9), 1)
-    calories = random.randint(1500, 3500)
-    temperature = round(random.uniform(36.0, 38.5), 1)
+    required_columns = [
+        "Timestamp",
+        "heart_rate",
+        "temperature",
+        "respiration",
+        "steps",
+        "sleep_hours",
+        "stress_level",
+        "spo2",
+        "calories",
+        "activity_type",
+        "fatigue_level"
+    ]
 
-    # ---------------- METRICS ---------------- #
+    missing_columns = [
+        col for col in required_columns
+        if col not in df.columns
+    ]
 
-    col1, col2, col3 = st.columns(3)
+    if missing_columns:
 
-    with col1:
-        st.metric(
-            "Heart Rate",
-            f"{heart_rate} BPM"
-        )
-
-    with col2:
-        st.metric(
-            "SpO2 Level",
-            f"{spo2}%"
-        )
-
-    with col3:
-        st.metric(
-            "Daily Steps",
-            steps
-        )
-
-    col4, col5, col6 = st.columns(3)
-
-    with col4:
-        st.metric(
-            "Sleep Hours",
-            f"{sleep_hours} hrs"
-        )
-
-    with col5:
-        st.metric(
-            "Calories Burned",
-            calories
-        )
-
-    with col6:
-        st.metric(
-            "Temperature",
-            f"{temperature} °C"
-        )
-
-    # ---------------- ALERTS ---------------- #
-
-    st.subheader("Health Alerts")
-
-    if heart_rate > 100:
-        st.warning(
-            "⚠ High Heart Rate Detected"
-        )
-
-    if spo2 < 95:
         st.error(
-            "⚠ Low Oxygen Level Detected"
+            f"Missing columns: {', '.join(missing_columns)}"
         )
-
-    if sleep_hours < 6:
-        st.warning(
-            "⚠ Poor Sleep Quality"
-        )
-
-    if steps < 4000:
-        st.info(
-            "🚶 Increase Physical Activity"
-        )
-
-    if (
-        heart_rate <= 100
-        and spo2 >= 95
-        and sleep_hours >= 6
-        and steps >= 4000
-    ):
-        st.success(
-            "✅ Health Status Normal"
-        )
-
-    # ---------------- HEALTH SCORE ---------------- #
-
-    health_score = 100
-
-    if heart_rate > 100:
-        health_score -= 20
-
-    if spo2 < 95:
-        health_score -= 20
-
-    if sleep_hours < 6:
-        health_score -= 15
-
-    if steps < 4000:
-        health_score -= 10
-
-    st.subheader("Overall Health Score")
-
-    st.metric(
-        "Health Score",
-        health_score
-    )
-
-    # ---------------- CHARTS ---------------- #
-
-    st.subheader("Live Health Trends")
-
-    trend_data = pd.DataFrame({
-        "Time": pd.date_range(
-            start=datetime.now(),
-            periods=10,
-            freq="H"
-        ),
-        "Heart Rate": [
-            random.randint(60, 120)
-            for _ in range(10)
-        ],
-        "SpO2": [
-            random.randint(92, 100)
-            for _ in range(10)
-        ],
-        "Steps": [
-            random.randint(1000, 15000)
-            for _ in range(10)
-        ]
-    })
-
-    st.line_chart(
-        trend_data.set_index("Time")
-    )
-
-    # ---------------- BMI CALCULATOR ---------------- #
-
-    st.subheader("BMI Calculator")
-
-    c1, c2 = st.columns(2)
-
-    with c1:
-        height = st.number_input(
-            "Height (meters)",
-            min_value=0.0,
-            format="%.2f"
-        )
-
-    with c2:
-        weight = st.number_input(
-            "Weight (kg)",
-            min_value=0.0,
-            format="%.2f"
-        )
-
-    if height > 0:
-
-        bmi = weight / (height ** 2)
-
-        st.metric(
-            "BMI",
-            round(bmi, 2)
-        )
-
-        if bmi < 18.5:
-            st.info("Underweight")
-
-        elif bmi < 25:
-            st.success("Normal Weight")
-
-        elif bmi < 30:
-            st.warning("Overweight")
-
-        else:
-            st.error("Obesity")
-
-# =========================================================
-# HEALTHCARE ANALYSIS
-# =========================================================
-
-elif choice == "Healthcare Analysis":
-
-    uploaded_file = st.file_uploader(
-        "Upload wearable data CSV",
-        type=["csv"]
-    )
-
-    if uploaded_file is not None:
-
-        df = pd.read_csv(uploaded_file)
-
-        required_columns = [
-            "Timestamp",
-            "heart_rate",
-            "temperature",
-            "respiration",
-            "steps",
-            "sleep_hours",
-            "stress_level",
-            "spo2",
-            "calories",
-            "activity_type",
-            "fatigue_level"
-        ]
-
-        missing_columns = [
-            col for col in required_columns
-            if col not in df.columns
-        ]
-
-        if missing_columns:
-
-            st.error(
-                f"Missing columns: {', '.join(missing_columns)}"
-            )
-
-        else:
-
-            # ---------------- PREPROCESSING ---------------- #
-
-            df["Timestamp"] = pd.to_datetime(
-                df["Timestamp"],
-                errors="coerce"
-            )
-
-            df = df.dropna().copy()
-
-            df = df.sort_values(
-                "Timestamp"
-            ).reset_index(drop=True)
-
-            df["hr_avg"] = df[
-                "heart_rate"
-            ].rolling(
-                3,
-                min_periods=1
-            ).mean()
-
-            # ---------------- HEALTH SCORE ---------------- #
-
-            def calculate_health_score(row):
-
-                score = 100
-
-                if row["heart_rate"] > row["hr_avg"] + 10:
-                    score -= 20
-
-                if row["temperature"] > 37.5:
-                    score -= 20
-
-                if row["respiration"] > 20:
-                    score -= 15
-
-                if row["sleep_hours"] < 6:
-                    score -= 15
-
-                if row["spo2"] < 95:
-                    score -= 10
-
-                if row["steps"] < 4000:
-                    score -= 10
-
-                return max(score, 0)
-
-            df["health_score"] = df.apply(
-                calculate_health_score,
-                axis=1
-            )
-
-            # ---------------- RECOMMENDATION ---------------- #
-
-            def recommend(row):
-
-                rec = []
-
-                if row["heart_rate"] > row["hr_avg"] + 10:
-                    rec.append(
-                        "High heart rate detected."
-                    )
-
-                if row["temperature"] > 37.5:
-                    rec.append(
-                        "Body temperature elevated."
-                    )
-
-                if row["respiration"] > 20:
-                    rec.append(
-                        "Respiration rate is high."
-                    )
-
-                if row["sleep_hours"] < 6:
-                    rec.append(
-                        "Sleep duration is low."
-                    )
-
-                if row["spo2"] < 95:
-                    rec.append(
-                        "Low oxygen level detected."
-                    )
-
-                if row["stress_level"] == "high":
-                    rec.append(
-                        "Stress level is high."
-                    )
-
-                if not rec:
-                    rec.append(
-                        "Health indicators stable."
-                    )
-
-                return " ".join(rec)
-
-            df["recommendation"] = df.apply(
-                recommend,
-                axis=1
-            )
-
-            # ---------------- MACHINE LEARNING ---------------- #
-
-            le = LabelEncoder()
-
-            df["fatigue_encoded"] = le.fit_transform(
-                df["fatigue_level"]
-            )
-
-            X = df[
-                [
-                    "heart_rate",
-                    "temperature",
-                    "respiration",
-                    "steps",
-                    "sleep_hours",
-                    "spo2"
-                ]
-            ]
-
-            y = df["fatigue_encoded"]
-
-            X_train, X_test, y_train, y_test = train_test_split(
-                X,
-                y,
-                test_size=0.2,
-                random_state=42
-            )
-
-            model = RandomForestClassifier(
-                random_state=42
-            )
-
-            model.fit(
-                X_train,
-                y_train
-            )
-
-            y_pred = model.predict(X_test)
-
-            accuracy = accuracy_score(
-                y_test,
-                y_pred
-            )
-
-            latest = X.iloc[-1].values.reshape(1, -1)
-
-            prediction = model.predict(latest)
-
-            predicted_label = le.inverse_transform(
-                prediction
-            )[0]
-
-            latest_row = df.iloc[-1]
-
-            # ---------------- DASHBOARD ---------------- #
-
-            st.subheader("Health Dashboard")
-
-            d1, d2, d3, d4 = st.columns(4)
-
-            d1.metric(
-                "Heart Rate",
-                int(latest_row["heart_rate"])
-            )
-
-            d2.metric(
-                "SpO2",
-                int(latest_row["spo2"])
-            )
-
-            d3.metric(
-                "Health Score",
-                int(latest_row["health_score"])
-            )
-
-            d4.metric(
-                "Stress Level",
-                latest_row["stress_level"]
-            )
-
-            # ---------------- AI PREDICTION ---------------- #
-
-            st.subheader("AI Prediction")
-
-            st.success(
-                f"Predicted Fatigue Level: {predicted_label}"
-            )
-
-            # ---------------- RECOMMENDATION ---------------- #
-
-            st.subheader("Latest Recommendation")
-
-            st.info(
-                latest_row["recommendation"]
-            )
-
-            # ---------------- MODEL ACCURACY ---------------- #
-
-            st.subheader("Model Performance")
-
-            st.metric(
-                "Accuracy",
-                f"{accuracy * 100:.2f}%"
-            )
-
-            # ---------------- CONFUSION MATRIX ---------------- #
-
-            cm = confusion_matrix(
-                y_test,
-                y_pred
-            )
-
-            st.subheader("Confusion Matrix")
-
-            st.dataframe(
-                pd.DataFrame(cm),
-                use_container_width=True
-            )
-
-            # ---------------- CLASSIFICATION REPORT ---------------- #
-
-            report = classification_report(
-                y_test,
-                y_pred,
-                output_dict=True
-            )
-
-            report_df = pd.DataFrame(
-                report
-            ).transpose()
-
-            st.subheader(
-                "Classification Report"
-            )
-
-            st.dataframe(
-                report_df,
-                use_container_width=True
-            )
-
-            # ---------------- FEATURE IMPORTANCE ---------------- #
-
-            importance_df = pd.DataFrame({
-                "Feature": X.columns,
-                "Importance": model.feature_importances_
-            })
-
-            st.subheader(
-                "Feature Importance"
-            )
-
-            st.bar_chart(
-                importance_df.set_index(
-                    "Feature"
-                )
-            )
-
-            # ---------------- HEALTH TRENDS ---------------- #
-
-            st.subheader("Health Trends")
-
-            st.line_chart(
-                df.set_index("Timestamp")[
-                    [
-                        "heart_rate",
-                        "health_score"
-                    ]
-                ]
-            )
-
-            # ---------------- SAVE ANALYSIS ---------------- #
-
-            if st.button("Save This Analysis"):
-
-                save_health_record(
-                    st.session_state.username,
-                    latest_row,
-                    predicted_label
-                )
-
-                st.success(
-                    "Analysis Saved Successfully"
-                )
-
-            # ---------------- DOWNLOAD CSV ---------------- #
-
-            csv = df.to_csv(
-                index=False
-            ).encode("utf-8")
-
-            st.download_button(
-                label="Download Analyzed Data",
-                data=csv,
-                file_name="health_analysis.csv",
-                mime="text/csv"
-            )
-
-# =========================================================
-# USER HISTORY
-# =========================================================
-
-elif choice == "User History":
-
-    st.subheader("User History")
-
-    history_df = get_user_history(
-        st.session_state.username
-    )
-
-    if history_df.empty:
-
-        st.info("No history found")
 
     else:
 
+        # ---------------- PREPROCESSING ---------------- #
+
+        df["Timestamp"] = pd.to_datetime(
+            df["Timestamp"],
+            errors="coerce"
+        )
+
+        df = df.dropna().copy()
+
+        df = df.sort_values(
+            "Timestamp"
+        ).reset_index(drop=True)
+
+        df["hr_avg"] = df[
+            "heart_rate"
+        ].rolling(
+            3,
+            min_periods=1
+        ).mean()
+
+        # ---------------- HEALTH SCORE ---------------- #
+
+        def calculate_health_score(row):
+
+            score = 100
+
+            if row["heart_rate"] > row["hr_avg"] + 10:
+                score -= 20
+
+            if row["temperature"] > 37.5:
+                score -= 20
+
+            if row["respiration"] > 20:
+                score -= 15
+
+            if row["sleep_hours"] < 6:
+                score -= 15
+
+            if row["spo2"] < 95:
+                score -= 10
+
+            if row["steps"] < 4000:
+                score -= 10
+
+            return max(score, 0)
+
+        df["health_score"] = df.apply(
+            calculate_health_score,
+            axis=1
+        )
+
+        # ---------------- RECOMMENDATIONS ---------------- #
+
+        def recommend(row):
+
+            rec = []
+
+            if row["heart_rate"] > row["hr_avg"] + 10:
+                rec.append("High heart rate detected.")
+
+            if row["temperature"] > 37.5:
+                rec.append("Body temperature elevated.")
+
+            if row["respiration"] > 20:
+                rec.append("Respiration rate is high.")
+
+            if row["sleep_hours"] < 6:
+                rec.append("Sleep duration is low.")
+
+            if row["spo2"] < 95:
+                rec.append("Low oxygen level detected.")
+
+            if row["stress_level"] == "high":
+                rec.append("Stress level is high.")
+
+            if not rec:
+                rec.append("Health indicators stable.")
+
+            return " ".join(rec)
+
+        df["recommendation"] = df.apply(
+            recommend,
+            axis=1
+        )
+
+        # ---------------- MACHINE LEARNING ---------------- #
+
+        le = LabelEncoder()
+
+        df["fatigue_encoded"] = le.fit_transform(
+            df["fatigue_level"]
+        )
+
+        X = df[
+            [
+                "heart_rate",
+                "temperature",
+                "respiration",
+                "steps",
+                "sleep_hours",
+                "spo2"
+            ]
+        ]
+
+        y = df["fatigue_encoded"]
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=0.2,
+            random_state=42
+        )
+
+        model = RandomForestClassifier(
+            random_state=42
+        )
+
+        model.fit(
+            X_train,
+            y_train
+        )
+
+        y_pred = model.predict(X_test)
+
+        accuracy = accuracy_score(
+            y_test,
+            y_pred
+        )
+
+        cm = confusion_matrix(
+            y_test,
+            y_pred
+        )
+
+        report = classification_report(
+            y_test,
+            y_pred,
+            output_dict=True
+        )
+
+        report_df = pd.DataFrame(
+            report
+        ).transpose()
+
+        # ---------------- PREDICTION ---------------- #
+
+        latest = X.iloc[-1].values.reshape(1, -1)
+
+        prediction = model.predict(latest)
+
+        predicted_label = le.inverse_transform(
+            prediction
+        )[0]
+
+        latest_row = df.iloc[-1]
+
+        # ---------------- HEALTH ALERTS ---------------- #
+
+        st.subheader("Health Alerts")
+
+        if latest_row["spo2"] < 90:
+
+            st.error(
+                "Critical Alert: Oxygen level is very low!"
+            )
+
+        if latest_row["heart_rate"] > 130:
+
+            st.warning(
+                "Warning: Abnormal heart rate detected!"
+            )
+
+        # ---------------- MODEL PERFORMANCE ---------------- #
+
+        st.subheader("Model Performance")
+
+        c1, c2 = st.columns(2)
+
+        with c1:
+
+            st.metric(
+                "Model Accuracy",
+                f"{accuracy * 100:.2f}%"
+            )
+
+        with c2:
+
+            st.metric(
+                "Training Samples",
+                len(X_train)
+            )
+
+        st.write("Confusion Matrix")
+
+        cm_df = pd.DataFrame(cm)
+
         st.dataframe(
-            history_df,
+            cm_df,
             use_container_width=True
         )
 
-# ---------------- FOOTER ---------------- #
+        # ---------------- CLASSIFICATION REPORT ---------------- #
 
-st.subheader("Project Conclusion")
+        st.subheader("Classification Report")
+
+        st.dataframe(
+            report_df,
+            use_container_width=True
+        )
+
+        # ---------------- FEATURE IMPORTANCE ---------------- #
+
+        st.subheader("Feature Importance")
+
+        importance_df = pd.DataFrame({
+            "Feature": X.columns,
+            "Importance": model.feature_importances_
+        })
+
+        importance_df = importance_df.sort_values(
+            by="Importance",
+            ascending=False
+        )
+
+        st.dataframe(
+            importance_df,
+            use_container_width=True
+        )
+
+        st.bar_chart(
+            importance_df.set_index("Feature")
+        )
+
+        # ---------------- DASHBOARD ---------------- #
+
+        st.subheader("Dashboard")
+
+        d1, d2, d3, d4 = st.columns(4)
+
+        d1.metric(
+            "Heart Rate",
+            int(latest_row["heart_rate"])
+        )
+
+        d2.metric(
+            "SpO2",
+            int(latest_row["spo2"])
+        )
+
+        d3.metric(
+            "Health Score",
+            int(latest_row["health_score"])
+        )
+
+        d4.metric(
+            "Stress Level",
+            latest_row["stress_level"]
+        )
+
+        # ---------------- BMI CALCULATOR ---------------- #
+
+        st.subheader("BMI Calculator")
+
+        b1, b2 = st.columns(2)
+
+        with b1:
+
+            height = st.number_input(
+                "Height (meters)",
+                min_value=0.0,
+                format="%.2f"
+            )
+
+        with b2:
+
+            weight = st.number_input(
+                "Weight (kg)",
+                min_value=0.0,
+                format="%.2f"
+            )
+
+        if height > 0:
+
+            bmi = weight / (height ** 2)
+
+            st.metric(
+                "BMI",
+                round(bmi, 2)
+            )
+
+        # ---------------- AI PREDICTION ---------------- #
+
+        st.subheader("AI Prediction")
+
+        st.info(
+            f"Predicted Fatigue Level: {predicted_label}"
+        )
+
+        # ---------------- RECOMMENDATION ---------------- #
+
+        st.subheader("Latest Recommendation")
+
+        st.success(
+            latest_row["recommendation"]
+        )
+
+        # ---------------- HEALTH TRENDS ---------------- #
+
+        st.subheader("Health Trends")
+
+        st.line_chart(
+            df.set_index("Timestamp")[
+                ["heart_rate", "health_score"]
+            ]
+        )
+
+        # ---------------- ACTIVITY ANALYTICS ---------------- #
+
+        st.subheader("Activity Analytics")
+
+        activity_count = df[
+            "activity_type"
+        ].value_counts()
+
+        st.bar_chart(activity_count)
+
+        # ---------------- SAVE ANALYSIS ---------------- #
+
+        if st.button("Save This Analysis"):
+
+            save_health_record(
+                st.session_state.username,
+                latest_row,
+                predicted_label
+            )
+
+            st.success(
+                "Analysis saved successfully"
+            )
+
+        # ---------------- DOWNLOAD CSV ---------------- #
+
+        csv = df.to_csv(
+            index=False
+        ).encode("utf-8")
+
+        st.download_button(
+            label="Download Analyzed Data",
+            data=csv,
+            file_name="health_analysis.csv",
+            mime="text/csv"
+        )
+
+# ---------------- USER HISTORY ---------------- #
+
+st.subheader("User History")
+
+history_df = get_user_history(
+    st.session_state.username
+)
+
+if history_df.empty:
+
+    st.info("No history found")
+
+else:
+
+    st.dataframe(
+        history_df,
+        use_container_width=True
+    )
+
+# ---------------- CONCLUSION ---------------- #
+
+st.subheader("Conclusion")
 
 st.write(
-    "This AI-powered healthcare system analyzes "
-    "wearable sensor data, predicts fatigue levels "
-    "using machine learning, provides personalized "
-    "healthcare recommendations, and includes a "
-    "live wearable monitoring dashboard using "
-    "hybrid wearable sensor simulation."
+    "This system analyzes wearable sensor data, "
+    "predicts fatigue levels using machine learning, "
+    "stores history in a database, and provides "
+    "personalized healthcare recommendations."
 )
