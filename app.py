@@ -1,4 +1,3 @@
-```python
 import sqlite3
 import hashlib
 import random
@@ -927,5 +926,3 @@ st.write(
     "live wearable monitoring dashboard using "
     "hybrid wearable sensor simulation."
 )
-```
-
