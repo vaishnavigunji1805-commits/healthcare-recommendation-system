@@ -80,7 +80,7 @@ if st.button("🚀 Stream Window Sequence to FastAPI Backend Model", type="prima
             st.caption("🌐 Running in Cloud Simulation Mode")
 
         # 3. Render Output Metrics
-        st.balloons()
+        #st.balloons()
         res_col1, res_col2 = st.columns(2)
         with res_col1:
             st.metric(label="System Risk Output Percentage", value=f"{score}%")
