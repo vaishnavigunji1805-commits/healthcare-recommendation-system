@@ -1,4 +1,8 @@
 streamlit
+requests
 pandas
-matplotlib
-scikit-learn
+fastapi
+uvicorn
+pydantic
+tensorflow
+numpy
