@@ -1,34 +1,54 @@
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List
+from model_handler import HealthcareModelHandler
+import uvicorn
 
-def build_healthcare_lstm(time_steps=5, features=4):
-    """
-    Builds a professional sequence-to-classification LSTM network
-    for processing sequential wearable sensor data windows.
-    """
-    model = Sequential([
-        # First LSTM Layer: processes time-series frames and passes sequences forward
-        LSTM(64, input_shape=(time_steps, features), return_sequences=True),
-        Dropout(0.2), # Prevents overfitting on training datasets
-        
-        # Second LSTM Layer: collapses the sequence down to global features
-        LSTM(32, return_sequences=False),
-        Dropout(0.2),
-        
-        # Dense layers for final classification logic
-        Dense(16, activation='relu'),
-        Dense(1, activation='sigmoid') # Outputs a probability score between 0 and 1
-    ])
+app = FastAPI(title="LSTM Production Healthcare API")
+
+# Initialize the global engine handler
+engine = HealthcareModelHandler()
+
+class BiometricSnapshot(BaseModel):
+    heart_rate: float
+    blood_pressure_systolic: float
+    sleep_hours: float
+    steps: float
+
+class SequencePayload(BaseModel):
+    history: List[BiometricSnapshot]
+
+@app.post("/predict")
+def predict_health_trends(payload: SequencePayload):
+    if len(payload.history) != 5:
+        raise HTTPException(status_code=400, detail="LSTM input layers expect exactly 5 sequence blocks.")
     
-    model.compile(
-        optimizer='adam', 
-        loss='binary_crossentropy', 
-        metrics=['accuracy']
-    )
-    return model
+    # Parse incoming Pydantic matrix rows into standard numerical lists
+    formatted_matrix = []
+    for snapshot in payload.history:
+        formatted_matrix.append([
+            snapshot.heart_rate,
+            snapshot.blood_pressure_systolic,
+            snapshot.sleep_hours,
+            snapshot.steps
+        ])
+        
+    # Run the sequence through our deep learning pipeline worker
+    risk_probability = engine.run_prediction(formatted_matrix)
+    risk_percentage = round(risk_probability * 100, 2)
+    
+    # Decision boundaries
+    if risk_percentage > 70.0:
+        recommendation = "CRITICAL: Sequential multi-step anomalies mapped by LSTM layers. Rest recommended immediately."
+    elif risk_percentage > 40.0:
+        recommendation = "WARNING: Variance trends detected over recent time frames. Monitor activity and maintain hydration."
+    else:
+        recommendation = "OPTIMAL: Time-series biometric patterns are running within stable control limits."
+        
+    return {
+        "risk_score_percentage": risk_percentage,
+        "recommendation": recommendation
+    }
 
 if __name__ == "__main__":
-    # Let's verify the architecture looks sound
-    network = build_healthcare_lstm()
-    network.summary()
+    uvicorn.run(app, host="127.0.0.1", port=8000)
